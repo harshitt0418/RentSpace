@@ -23,7 +23,7 @@ export const connectSocket = () => {
 
   const token = useAuthStore.getState().accessToken
 
-  socket = io('/', {
+  socket = io(import.meta.env.VITE_API_URL || '/', {
     path:            '/socket.io',
     withCredentials: true,
     auth:            { token },
