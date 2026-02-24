@@ -101,10 +101,7 @@ export default function ResetPasswordPage() {
           <form onSubmit={handleSubmit}>
             {/* OTP */ }
             <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Verification code</label>
-            <div style={{
-              display: 'flex', gap: 10, justifyContent: 'center',
-              margin: '0 0 20px',
-            }}>
+            <div className="otp-row" style={{ margin: '0 0 20px' }}>
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -116,12 +113,7 @@ export default function ResetPasswordPage() {
                   onChange={(e) => handleChange(i, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   onPaste={i === 0 ? handlePaste : undefined}
-                  className="form-input"
-                  style={{
-                    width: 52, height: 60, textAlign: 'center',
-                    fontSize: 24, fontWeight: 700, padding: 0,
-                    letterSpacing: 0, caretColor: 'var(--primary)',
-                  }}
+                  className="form-input otp-box"
                   autoFocus={i === 0}
                 />
               ))}

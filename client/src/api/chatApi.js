@@ -14,3 +14,6 @@ export const getMessages = (roomId, params) =>
 
 export const sendMessage = (roomId, content, type = 'text') =>
   api.post(`/chat/rooms/${roomId}/messages`, { content, type }).then((r) => r.data)
+
+export const deleteRoom = (roomId) =>
+  api.delete(`/chat/rooms/${roomId}`).then((r) => r.data)

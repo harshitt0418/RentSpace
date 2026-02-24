@@ -33,7 +33,7 @@ export default function ListItemPage() {
     coordinates: null,
     pricePerDay: '',
     deposit: '',
-    minRental: '1 day minimum',
+    minRental: 1,
   })
 
   const { mutate: createItem, isPending: publishing } = useCreateItem()
@@ -55,6 +55,14 @@ export default function ListItemPage() {
 
   const goStep = (s) => setStep(s)
 
+  const validateStep2 = () => {
+    if (imageFiles.length === 0) {
+      setErrors({ photos: 'At least one photo is required' })
+      return false
+    }
+    return true
+  }
+
   const validateStep1 = () => {
     const e = {}
     if (!form.title.trim())       e.title       = 'Title is required'
@@ -67,7 +75,7 @@ export default function ListItemPage() {
 
   const validateStep3 = () => {
     const e = {}
-    if (!form.pricePerDay || Number(form.pricePerDay) < 1) e.pricePerDay = 'Price must be at least $1'
+    if (!form.pricePerDay || Number(form.pricePerDay) < 1) e.pricePerDay = 'Price must be at least ₹1'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -88,6 +96,7 @@ export default function ListItemPage() {
     }))
     formData.append('pricePerDay', form.pricePerDay)
     if (form.deposit) formData.append('deposit', form.deposit)
+    formData.append('minRentalDays', form.minRental)
     imageFiles.forEach((f) => formData.append('images', f))
 
     createItem(formData, {
@@ -180,8 +189,22 @@ export default function ListItemPage() {
       {/* Step 2: Photos */}
       {step === 2 && (
         <div className="wizard-card">
-          <div className="wizard-section-title">Upload Photos</div>
-          <div className="upload-zone" onClick={() => fileRef.current?.click()}>
+          <div className="wizard-section-title">
+            Upload Photos
+            <span style={{ color: 'var(--danger)', marginLeft: 6, fontSize: 16 }}>*</span>
+            <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--danger)', marginLeft: 6 }}>Required</span>
+          </div>
+          {errors.photos && (
+            <div style={{ color: 'var(--danger)', fontSize: 13, fontWeight: 500, marginBottom: 12,
+              padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+              ⚠️ {errors.photos}
+            </div>
+          )}
+          <div
+            className="upload-zone"
+            onClick={() => fileRef.current?.click()}
+            style={errors.photos ? { borderColor: 'var(--danger)' } : {}}
+          >
             <div className="upload-icon">📁</div>
             <div className="upload-text">Drag photos here or click to upload</div>
             <div className="upload-sub">Up to 6 photos · JPG, PNG · Max 10MB each</div>
@@ -207,7 +230,7 @@ export default function ListItemPage() {
           )}
           <div className="wizard-footer">
             <button className="btn-secondary" onClick={() => goStep(1)}>← Back</button>
-            <button className="btn-primary" onClick={() => goStep(3)}>Next: Pricing →</button>
+            <button className="btn-primary" onClick={() => { if (validateStep2()) goStep(3) }}>Next: Pricing →</button>
           </div>
         </div>
       )}
@@ -217,7 +240,7 @@ export default function ListItemPage() {
         <div className="wizard-card">
           <div className="wizard-section-title">Set Your Price</div>
           <div className="form-group">
-            <label className="form-label">Daily Rate (USD)</label>
+            <label className="form-label">Daily Rate (₹)</label>
             <input className="form-input" type="number" name="pricePerDay" value={form.pricePerDay} onChange={set} placeholder="e.g. 45" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 20, ...(errors.pricePerDay ? { borderColor: 'var(--danger)' } : {}) }} />
             {errors.pricePerDay && <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 4 }}>{errors.pricePerDay}</div>}
           </div>
@@ -228,10 +251,10 @@ export default function ListItemPage() {
           <div className="form-group">
             <label className="form-label">Minimum Rental Period</label>
             <select className="form-input" name="minRental" value={form.minRental} onChange={set}>
-              <option>1 day minimum</option>
-              <option>2 days minimum</option>
-              <option>3 days minimum</option>
-              <option>1 week minimum</option>
+              <option value={1}>1 day minimum</option>
+              <option value={2}>2 days minimum</option>
+              <option value={3}>3 days minimum</option>
+              <option value={7}>1 week minimum</option>
             </select>
           </div>
           <div className="wizard-footer">
@@ -262,7 +285,7 @@ export default function ListItemPage() {
                 <div className="item-rating">⭐ New listing</div>
               </div>
               <div className="item-footer">
-                <div className="item-price">${form.pricePerDay || '0'} <span>/ day</span></div>
+                <div className="item-price">₹{form.pricePerDay || '0'} <span>/ day</span></div>
                 <div className="item-owner">
                   <div className="owner-avatar" style={{ fontSize: 10 }}>You</div>
                   <div className="owner-name">You</div>

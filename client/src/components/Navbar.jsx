@@ -4,13 +4,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LayoutDashboard, LogOut, User, Sun, Moon, Menu, X, Bell, Check, Heart, MessageCircle, Plus, Search } from 'lucide-react'
+import { LayoutDashboard, LogOut, User, Sun, Moon, Menu, X, Bell, Check, Heart, MessageCircle, Plus, Search, Trash2 } from 'lucide-react'
 
 import useAuthStore from '@/store/authStore'
 import useThemeStore from '@/store/themeStore'
 import { useLogout } from '@/hooks/useAuth'
 import useNotificationStore from '@/store/notificationStore'
-import { useNotifications, useMarkAllRead } from '@/hooks/useNotifications'
+import { useNotifications, useMarkAllRead, useClearAllNotifications } from '@/hooks/useNotifications'
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -31,6 +31,7 @@ export default function Navbar() {
   const { theme, toggleTheme } = useThemeStore()
   const { data: notifData } = useNotifications({ limit: 8 })
   const { mutate: markAllRead } = useMarkAllRead()
+  const { mutate: clearAll, isPending: clearing } = useClearAllNotifications()
   const notifications = notifData?.notifications || []
 
   useEffect(() => {
@@ -155,11 +156,23 @@ export default function Navbar() {
                     >
                       <div className="notif-dropdown-header">
                         <span style={{ fontWeight: 700, fontSize: 14 }}>Notifications</span>
-                        {unreadCount > 0 && (
-                          <button className="notif-mark-all" onClick={() => markAllRead()}>
-                            <Check size={13} /> Mark all read
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {unreadCount > 0 && (
+                            <button className="notif-mark-all" onClick={() => markAllRead()}>
+                              <Check size={13} /> Mark all read
+                            </button>
+                          )}
+                          {notifications.length > 0 && (
+                            <button
+                              className="notif-mark-all notif-clear-all"
+                              onClick={() => clearAll()}
+                              disabled={clearing}
+                              title="Clear all notifications"
+                            >
+                              <Trash2 size={13} /> Clear all
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="notif-dropdown-body">
                         {notifications.length === 0 ? (
@@ -270,6 +283,18 @@ export default function Navbar() {
                 <button className="icon-btn" onClick={() => setMobileOpen(false)}><X size={20} /></button>
               </div>
               <div className="mobile-menu-body">
+                {/* Mobile Search */}
+                <form className="mobile-search-form" onSubmit={(e) => { handleSearch(e); setMobileOpen(false) }}>
+                  <Search size={15} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
+                  <input
+                    type="search"
+                    className="mobile-search-input"
+                    placeholder="Search rentals…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoComplete="off"
+                  />
+                </form>
                 <button className="mobile-nav-link" onClick={() => go('/browse')}>🔍 Browse</button>
                 <button className="mobile-nav-link" onClick={() => go('/how-it-works')}>📋 How It Works</button>
                 <button className="mobile-nav-link" onClick={() => go('/community')}>👥 Community</button>

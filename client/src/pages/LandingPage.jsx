@@ -8,6 +8,7 @@ import { useItems } from '@/hooks/useItems'
 import { useWishlistIds, useToggleWishlist } from '@/hooks/useWishlist'
 import useAuthStore from '@/store/authStore'
 import { getStats } from '@/api/itemApi'
+import { Search, Calendar, CheckCircle, Star, Heart, MapPin, Tag, Camera, Monitor, Wrench, Tent, Music, Car, Building2, Bike, Package } from 'lucide-react'
 
 const HERO_CARDS = [
   {
@@ -34,9 +35,9 @@ const HERO_CARDS = [
 ]
 
 const STEPS = [
-  { num: '01', icon: '🔍', title: 'Find what you need', body: 'Search thousands of items listed by verified owners near you. Filter by category, price, location, and availability.' },
-  { num: '02', icon: '📅', title: 'Request your dates', body: 'Pick your rental window on the availability calendar. Send the owner a message and wait for instant confirmation.' },
-  { num: '03', icon: '🤝', title: 'Enjoy & return', body: 'Collect from the owner, use it, then return it safely. Leave a review and build your trusted community reputation.' },
+  { num: '01', Icon: Search, title: 'Find what you need', body: 'Search thousands of items listed by verified owners near you. Filter by category, price, location, and availability.' },
+  { num: '02', Icon: Calendar, title: 'Request your dates', body: 'Pick your rental window on the availability calendar. Send the owner a message and wait for instant confirmation.' },
+  { num: '03', Icon: CheckCircle, title: 'Enjoy & return', body: 'Collect from the owner, use it, then return it safely. Leave a review and build your trusted community reputation.' },
 ]
 
 
@@ -108,8 +109,8 @@ export default function LandingPage() {
                 <div className="hero-card-body">
                   <div className="hero-card-title">{c.title}</div>
                   <div className="hero-card-footer">
-                    <div className="hero-card-price">${c.price}/day</div>
-                    <div className="hero-card-rating">⭐ {c.rating}</div>
+                    <div className="hero-card-price">₹{c.price}/day</div>
+                    <div className="hero-card-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {c.rating}</div>
                   </div>
                 </div>
               </div>
@@ -125,7 +126,7 @@ export default function LandingPage() {
           {STEPS.map((s) => (
             <div className="step-card" key={s.num}>
               <div className="step-num">{s.num}</div>
-              <div className="step-icon">{s.icon}</div>
+              <div className="step-icon"><s.Icon size={32} /></div>
               <div className="step-title">{s.title}</div>
               <div className="step-body">{s.body}</div>
             </div>
@@ -162,7 +163,7 @@ export default function LandingPage() {
           </>
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-2)' }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🏷️</div>
+            <div style={{ fontSize: 56, marginBottom: 16 }}><Tag size={56} style={{ color: 'var(--text-3)' }} /></div>
             <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>No listings yet</div>
             <div style={{ fontSize: 14, marginBottom: 24 }}>Be the first to list an item in your area!</div>
             <button className="btn-primary" onClick={() => navigate('/list-item')}>List an Item</button>
@@ -188,29 +189,28 @@ function ItemCard({ item, idx, onClick }) {
   const liked = ids.includes(item._id)
   const { mutate: toggle } = useToggleWishlist()
   const firstImage = item.images?.[0]
-  const emoji = getCategoryEmoji(item.category)
 
   return (
     <div className="item-card" style={{ animationDelay: `${idx * 0.07}s` }} onClick={onClick}>
       <div className="item-img">
         {firstImage
           ? <img src={firstImage} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: 52 }}>{emoji}</span>
+          : getCategoryIcon(item.category)
         }
         <div className="item-img-overlay" />
         <div className={`item-like ${liked ? 'liked' : ''}`} onClick={(e) => { e.stopPropagation(); toggle(item._id) }}>
-          {liked ? '❤️' : '🤍'}
+          {liked ? <Heart size={16} fill="currentColor" /> : <Heart size={16} />}
         </div>
         <div className="item-badge">{item.category || 'General'}</div>
       </div>
       <div className="item-body">
         <div className="item-title">{item.title}</div>
         <div className="item-meta">
-          <div className="item-location"> {item.location?.city || item.location || 'Unknown'}</div>
-          <div className="item-rating"> {item.averageRating?.toFixed(1) || 'New'}</div>
+          <div className="item-location"> <MapPin size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.location?.city || item.location || 'Unknown'}</div>
+          <div className="item-rating"> <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.rating > 0 ? item.rating.toFixed(1) : 'New'}</div>
         </div>
         <div className="item-footer">
-          <div className="item-price">${item.pricePerDay} <span>/ day</span></div>
+          <div className="item-price">₹{item.pricePerDay} <span>/ day</span></div>
           <div className="item-owner">
             <div className="owner-avatar">{item.owner?.name?.[0] || '?'}</div>
             <div className="owner-name">{item.owner?.name?.split(' ')[0] || 'Owner'}</div>
@@ -221,11 +221,12 @@ function ItemCard({ item, idx, onClick }) {
   )
 }
 
-function getCategoryEmoji(cat) {
+function getCategoryIcon(cat) {
   const map = {
-    Photography: '📷', Cameras: '📷', Electronics: '🎮', 'Tools & DIY': '🔧', Tools: '🔧',
-    Outdoor: '🏕️', Sports: '🚲', Music: '🎸', Instruments: '🎸', Vehicles: '🚗',
-    Spaces: '🏠', Other: '📦',
+    Photography: Camera, Cameras: Camera, Electronics: Monitor, 'Tools & DIY': Wrench, Tools: Wrench,
+    Outdoor: Tent, Sports: Bike, Music: Music, Instruments: Music, Vehicles: Car,
+    Spaces: Building2, Other: Package,
   }
-  return map[cat] || '📦'
+  const Icon = map[cat] || Package
+  return <Icon size={52} style={{ color: 'var(--text-3)' }} />
 }

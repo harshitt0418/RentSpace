@@ -9,6 +9,7 @@ const {
   getMessages,
   createRoom,
   sendMessage,
+  deleteRoom,
 } = require('../controllers/chatController')
 
 const { protect } = require('../middleware/auth')
@@ -18,7 +19,8 @@ router.use(protect) // all chat routes require auth
 
 router.get ('/rooms',                  getRooms)
 router.post('/rooms',                  [body('recipientId').notEmpty().isMongoId()], validate, createRoom)
-router.get ('/rooms/:roomId/messages', getMessages)
-router.post('/rooms/:roomId/messages', [body('content').notEmpty()], validate, sendMessage)
+router.get   ('/rooms/:roomId/messages', getMessages)
+router.post  ('/rooms/:roomId/messages', [body('content').notEmpty()], validate, sendMessage)
+router.delete('/rooms/:roomId',           deleteRoom)
 
 module.exports = router

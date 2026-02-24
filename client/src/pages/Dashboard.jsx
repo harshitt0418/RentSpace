@@ -1,15 +1,22 @@
 /**
  * Dashboard.jsx — demoui-matched design with tab-based sidebar navigation
  */
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
+import { getMe } from '@/api/authApi'
 import { useReceivedRequests, useSentRequests, useAcceptRequest, useRejectRequest, useCompleteRequest } from '@/hooks/useRequests'
 import { useCreateReview, useMyRequestReviews } from '@/hooks/useReviews'
 import { useItems, useToggleItemStatus, useDeleteItem } from '@/hooks/useItems'
 import { useUserReviews } from '@/hooks/useReviews'
 import { useCreateRoom } from '@/hooks/useChat'
 import EditItemModal from '@/components/EditItemModal'
+import {
+  Home, Package, ClipboardList, CheckCircle, MessageCircle, Star, Plus, User, Menu,
+  Calendar, MapPin, Edit2, Trash2, DollarSign, Camera, Monitor, Wrench, Tent,
+  Music, Car, Building2, Bike, Check, AlertTriangle, PauseCircle, PlayCircle, X as XIcon, FileText, Clock, ArrowDownLeft, ArrowUpRight,
+  Layers, AlertCircle, PiggyBank
+} from 'lucide-react'
 
 const STATUS_CLASS = {
   pending: 'status-pending',
@@ -20,19 +27,30 @@ const STATUS_CLASS = {
 }
 
 const TABS = [
-  { key: 'overview', icon: '🏠', label: 'Overview' },
-  { key: 'listings', icon: '📦', label: 'My Listings' },
-  { key: 'requests', icon: '📋', label: 'Requests' },
-  { key: 'accepted', icon: '✅', label: 'Accepted Requests' },
-  { key: 'messages', icon: '💬', label: 'Messages', route: '/chat' },
-  { key: 'reviews', icon: '⭐', label: 'Reviews' },
+  { key: 'overview', icon: Home, label: 'Overview' },
+  { key: 'listings', icon: Package, label: 'My Listings' },
+  { key: 'requests', icon: ClipboardList, label: 'Requests' },
+  { key: 'accepted', icon: CheckCircle, label: 'Accepted Requests' },
+  { key: 'history', icon: Clock, label: 'History' },
+  { key: 'messages', icon: MessageCircle, label: 'Messages', route: '/chat' },
+  { key: 'reviews', icon: Star, label: 'Reviews' },
 ]
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
+
+  // Sync fresh user data (avatar, name, etc.) from server on every Dashboard visit
+  useEffect(() => {
+    getMe().then((res) => { if (res?.user) setUser(res.user) }).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const validTabs = ['overview', 'listings', 'requests', 'accepted', 'history', 'reviews']
+  const tabFromUrl = searchParams.get('tab')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(validTabs.includes(tabFromUrl) ? tabFromUrl : 'overview')
   const [editingItem, setEditingItem] = useState(null)
   const [reviewTarget, setReviewTarget] = useState(null) // request to review
 
@@ -50,10 +68,16 @@ export default function Dashboard() {
 
   const requests = requestsData?.data || []
   const sentRequests = sentData?.data || []
+
+  // Accepted tab: only 'accepted' status (not yet completed)
   const acceptedRequests = [
-    ...requests.filter((r) => ['accepted', 'completed'].includes(r.status)),
-    ...sentRequests.filter((r) => ['accepted', 'completed'].includes(r.status)),
+    ...requests.filter((r) => r.status === 'accepted'),
+    ...sentRequests.filter((r) => r.status === 'accepted'),
   ]
+  // History tab: completed requests
+  const completedReceived = requests.filter((r) => r.status === 'completed')
+  const completedSent = sentRequests.filter((r) => r.status === 'completed')
+
   const listings = listingsData?.data || []
   const reviews = reviewsData?.data || []
 
@@ -71,24 +95,30 @@ export default function Dashboard() {
   return (
     <div className="dashboard-layout">
       {/* Mobile sidebar toggle */}
-      <button className="mobile-sidebar-btn icon-btn" onClick={() => setSidebarOpen((v) => !v)}
-        style={{ position: 'fixed', top: 78, left: 12, zIndex: 800 }}>
-        ☰
+      <button className="mobile-sidebar-btn icon-btn mobile-fab" onClick={() => setSidebarOpen((v) => !v)}>
+        <Menu size={20} />
       </button>
       {sidebarOpen && <div className="mobile-overlay" onClick={() => setSidebarOpen(false)} style={{ zIndex: 899 }} />}
 
       {/* Sidebar */}
       <aside className={`dash-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="dash-user">
-          <div className="dash-user-avatar" style={{ overflow: 'hidden' }}>
+        <div
+          className="dash-user"
+          onClick={() => navigate(`/profile/${user?._id}`)}
+          style={{ cursor: 'pointer', borderRadius: 10, transition: 'background 0.15s' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          title="View your profile"
+        >
+          <div className="dash-user-avatar" style={{ overflow: 'hidden', position: 'relative' }}>
             {user?.avatar
               ? <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
               : user?.name?.[0] || '?'
             }
           </div>
-          <div>
-            <div className="dash-user-name">{user?.name || 'User'}</div>
-            <div className="dash-user-role">Owner & Renter</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="dash-user-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'User'}</div>
+            <div className="dash-user-role" style={{ color: 'var(--accent)', fontSize: 11 }}>View Profile →</div>
           </div>
         </div>
         <div className="divider" style={{ marginBottom: 12 }} />
@@ -97,16 +127,27 @@ export default function Dashboard() {
           <div key={tab.key}
             className={`dash-nav-item ${activeTab === tab.key && !tab.route ? 'active' : ''}`}
             onClick={() => handleTabClick(tab)}>
-            <div className="dash-nav-icon">{tab.icon}</div>{tab.label}
+            <div className="dash-nav-icon" style={{ position: 'relative' }}>
+              <tab.icon size={16} />
+              {tab.key === 'requests' && pendingCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: 'var(--danger, #ef4444)',
+                  border: '1.5px solid var(--sidebar-bg, #111)',
+                  display: 'block',
+                }} />
+              )}
+            </div>{tab.label}
           </div>
         ))}
 
         <div className="divider" style={{ margin: '12px 0' }} />
         <div className="dash-nav-item" onClick={() => { setSidebarOpen(false); navigate('/list-item') }}>
-          <div className="dash-nav-icon">➕</div>List New Item
+          <div className="dash-nav-icon"><Plus size={16} /></div>List New Item
         </div>
         <div className="dash-nav-item" onClick={() => { setSidebarOpen(false); navigate(`/profile/${user?._id}`) }}>
-          <div className="dash-nav-icon">👤</div>Profile
+          <div className="dash-nav-icon"><User size={16} /></div>Profile
         </div>
       </aside>
 
@@ -114,17 +155,21 @@ export default function Dashboard() {
       <main className="dash-main">
         {activeTab === 'overview' && (
           <OverviewTab
-            user={user} listings={listings} requests={requests} pendingCount={pendingCount}
-            loadingRequests={loadingRequests} loadingListings={loadingListings}
-            accept={accept} reject={reject} navigate={navigate} onEdit={setEditingItem}
-            createRoom={createRoom} toggleStatus={toggleStatus} deleteItem={deleteItem}
+            user={user} listings={listings} pendingCount={pendingCount}
+            loadingListings={loadingListings} navigate={navigate}
+            onViewAll={() => setActiveTab('listings')}
           />
         )}
         {activeTab === 'listings' && (
           <ListingsTab listings={listings} loading={loadingListings} navigate={navigate} onEdit={setEditingItem} toggleStatus={toggleStatus} deleteItem={deleteItem} />
         )}
         {activeTab === 'requests' && (
-          <RequestsTab requests={requests} loading={loadingRequests} accept={accept} reject={reject} navigate={navigate} createRoom={createRoom} />
+          <RequestsTab
+            requests={requests}
+            sentRequests={sentRequests}
+            loading={loadingRequests || loadingSent}
+            accept={accept} reject={reject} navigate={navigate} createRoom={createRoom}
+          />
         )}
         {activeTab === 'accepted' && (
           <AcceptedRequestsTab
@@ -133,6 +178,16 @@ export default function Dashboard() {
             navigate={navigate}
             user={user}
             completeRequest={completeRequest}
+            onReview={setReviewTarget}
+          />
+        )}
+        {activeTab === 'history' && (
+          <HistoryTab
+            completedReceived={completedReceived}
+            completedSent={completedSent}
+            loading={loadingRequests || loadingSent}
+            navigate={navigate}
+            user={user}
             onReview={setReviewTarget}
           />
         )}
@@ -164,7 +219,7 @@ export default function Dashboard() {
 }
 
 /* ── Overview Tab ─────────────────────────────────────────────────────── */
-function OverviewTab({ user, listings, requests, pendingCount, loadingRequests, loadingListings, accept, reject, navigate, onEdit, createRoom, toggleStatus, deleteItem }) {
+function OverviewTab({ user, listings, pendingCount, loadingListings, navigate, onViewAll }) {
   return (
     <>
       <div className="dash-welcome">Good morning, {user?.name?.split(' ')[0] || 'there'}! 👋</div>
@@ -173,13 +228,13 @@ function OverviewTab({ user, listings, requests, pendingCount, loadingRequests, 
       {/* Stats */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">📦</div>
+          <div className="stat-icon"><Layers size={22} /></div>
           <div className="stat-value">{listings.length}</div>
           <div className="stat-label">Active Listings</div>
           <div className="stat-change">↑ +1 this week</div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">📋</div>
+          <div className="stat-icon"><AlertCircle size={22} /></div>
           <div className="stat-value">{pendingCount}</div>
           <div className="stat-label">Pending Requests</div>
           <div className="stat-change" style={{ color: 'var(--warning)' }}>
@@ -187,33 +242,17 @@ function OverviewTab({ user, listings, requests, pendingCount, loadingRequests, 
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">💰</div>
-          <div className="stat-value">${user?.totalEarnings || 0}</div>
+          <div className="stat-icon"><PiggyBank size={22} /></div>
+          <div className="stat-value">₹{user?.totalEarnings || 0}</div>
           <div className="stat-label">Total Earnings</div>
           <div className="stat-change">↑ this month</div>
         </div>
       </div>
 
-      {/* Incoming Requests */}
-      <div className="section-header">
-        <div className="section-label">Incoming Requests</div>
-        <div className="see-all">See all</div>
-      </div>
-
-      {loadingRequests ? (
-        <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>Loading requests…</div>
-      ) : requests.length === 0 ? (
-        <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>No requests yet.</div>
-      ) : (
-        requests.slice(0, 5).map((req) => (
-          <RequestRow key={req._id} req={req} accept={accept} reject={reject} navigate={navigate} createRoom={createRoom} />
-        ))
-      )}
-
-      {/* My Active Listings */}
-      <div className="section-header" style={{ marginTop: 28 }}>
-        <div className="section-label">My Active Listings</div>
-        <button className="btn-primary" style={{ padding: '8px 18px', fontSize: 13 }} onClick={() => navigate('/list-item')}>+ List New Item</button>
+      {/* My Listings — brief summary */}
+      <div className="section-header" style={{ marginTop: 8 }}>
+        <div className="section-label">My Listings</div>
+        <button className="btn-primary" style={{ padding: '8px 18px', fontSize: 13 }} onClick={() => navigate('/list-item')}>+ List New</button>
       </div>
 
       {loadingListings ? (
@@ -221,10 +260,20 @@ function OverviewTab({ user, listings, requests, pendingCount, loadingRequests, 
       ) : listings.length === 0 ? (
         <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>No listings yet.</div>
       ) : (
-        <div className="items-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          {listings.slice(0, 4).map((item) => (
-            <ItemCard key={item._id} item={item} onClick={() => navigate(`/items/${item._id}`)} onEdit={() => onEdit(item)} toggleStatus={toggleStatus} onDelete={deleteItem} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {listings.slice(0, 5).map((item) => (
+            <BriefListingRow key={item._id} item={item} onClick={() => navigate(`/items/${item._id}`)} />
           ))}
+          {listings.length > 5 && (
+            <div style={{ textAlign: 'center', paddingTop: 4 }}>
+              <span
+                style={{ fontSize: 13, color: 'var(--accent)', cursor: 'pointer' }}
+                onClick={() => onViewAll()}
+              >
+                +{listings.length - 5} more — view all
+              </span>
+            </div>
+          )}
         </div>
       )}
     </>
@@ -235,7 +284,7 @@ function OverviewTab({ user, listings, requests, pendingCount, loadingRequests, 
 function ListingsTab({ listings, loading, navigate, onEdit, toggleStatus, deleteItem }) {
   return (
     <>
-      <div className="dash-welcome">My Listings 📦</div>
+      <div className="dash-welcome">My Listings <Package size={20} style={{ display:'inline', verticalAlign:'middle' }} /></div>
       <div className="dash-sub">All your listed items in one place.</div>
 
       <div className="section-header" style={{ marginTop: 16 }}>
@@ -247,7 +296,7 @@ function ListingsTab({ listings, loading, navigate, onEdit, toggleStatus, delete
         <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>Loading listings…</div>
       ) : listings.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+          <div style={{ fontSize: 48, marginBottom: 12 }}><Package size={48} style={{ color: 'var(--text-3)' }} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No listings yet</div>
           <div style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 20 }}>Start sharing your stuff with the community!</div>
           <button className="btn-primary" onClick={() => navigate('/list-item')}>List Your First Item</button>
@@ -263,94 +312,241 @@ function ListingsTab({ listings, loading, navigate, onEdit, toggleStatus, delete
   )
 }
 
+/* ── Role Toggle (reusable) ──────────────────────────────────────────── */
+function RoleToggle({ value, onChange, labelA, labelB, labelC, iconA, iconB, iconC }) {
+  const opts = [
+    { val: 'a', label: labelA, icon: iconA },
+    { val: 'b', label: labelB, icon: iconB },
+    ...(labelC ? [{ val: 'c', label: labelC, icon: iconC }] : []),
+  ]
+  return (
+    <div style={{
+      display: 'inline-flex', borderRadius: 10, overflow: 'hidden',
+      border: '1px solid var(--border)', marginBottom: 20, flexShrink: 0,
+      flexWrap: 'wrap',
+    }}>
+      {opts.map(({ val, label, icon }) => (
+        <button
+          key={val}
+          onClick={() => onChange(val)}
+          style={{
+            padding: '7px 16px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.15s',
+            background: value === val ? 'var(--accent)' : 'transparent',
+            color: value === val ? '#fff' : 'var(--text-3)',
+          }}
+        >
+          {icon}{label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /* ── Requests Tab ─────────────────────────────────────────────────────── */
-function RequestsTab({ requests, loading, accept, reject, navigate, createRoom }) {
+function RequestsTab({ requests, sentRequests, loading, accept, reject, navigate, createRoom }) {
+  const [view, setView] = useState('received')
+  const list = view === 'received' ? requests : sentRequests
+  const isEmpty = list.length === 0
+
   return (
     <>
-      <div className="dash-welcome">Requests 📋</div>
-      <div className="dash-sub">Manage incoming rental requests.</div>
+      <div className="dash-welcome">Requests <ClipboardList size={20} style={{ display:'inline', verticalAlign:'middle' }} /></div>
+      <div className="dash-sub" style={{ marginBottom: 16 }}>View incoming and outgoing rental requests.</div>
+
+      <RoleToggle
+        value={view === 'received' ? 'a' : 'b'}
+        onChange={(v) => setView(v === 'a' ? 'received' : 'sent')}
+        labelA="Received"
+        labelB="Sent by Me"
+        iconA={<ArrowDownLeft size={13} />}
+        iconB={<ArrowUpRight size={13} />}
+      />
 
       {loading ? (
         <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>Loading requests…</div>
-      ) : requests.length === 0 ? (
+      ) : isEmpty ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No requests yet</div>
-          <div style={{ color: 'var(--text-3)', fontSize: 14 }}>When someone requests your items, they'll appear here.</div>
+          <ClipboardList size={48} style={{ color: 'var(--text-3)', display: 'block', margin: '0 auto 12px' }} />
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>
+            {view === 'received' ? 'No incoming requests yet' : 'No sent requests yet'}
+          </div>
+          <div style={{ color: 'var(--text-3)', fontSize: 14 }}>
+            {view === 'received' ? "When someone requests your items, they'll appear here." : 'Browse items and send a rental request.'}
+          </div>
         </div>
       ) : (
-        requests.map((req) => (
-          <RequestRow key={req._id} req={req} accept={accept} reject={reject} navigate={navigate} createRoom={createRoom} />
+        list.map((req) => (
+          <RequestRow
+            key={req._id} req={req}
+            accept={view === 'received' ? accept : undefined}
+            reject={view === 'received' ? reject : undefined}
+            navigate={navigate} createRoom={createRoom}
+            isSent={view === 'sent'}
+          />
         ))
       )}
     </>
   )
 }
+/* ── Shared Accepted / History Card ─────────────────────────────────── */
+function AcceptedCard({ req, user, navigate, completeRequest, onReview, isHistory = false }) {
+  const start = req.startDate ? new Date(req.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
+  const end = req.endDate ? new Date(req.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
+  const isOwner = (req.owner?._id || req.owner) === user?._id
+  const otherPerson = isOwner ? req.requester?.name : req.owner?.name
+  const otherPersonId = isOwner ? (req.requester?._id || req.requester) : (req.owner?._id || req.owner)
+  const isCompleted = req.status === 'completed'
+  return (
+    <div className="request-card">
+      {/* ── Top row: thumbnail + details + price ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+        <div
+          onClick={() => navigate(`/items/${req.item?._id || req.item}`)}
+          style={{
+            width: 64, height: 64, borderRadius: 10, flexShrink: 0,
+            overflow: 'hidden', background: 'var(--bg-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', border: '1px solid var(--border)',
+          }}
+        >
+          {req.item?.images?.[0]
+            ? <img src={req.item.images[0]} alt={req.item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : getCategoryIcon(req.item?.category)
+          }
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="request-item-name" style={{ cursor: 'pointer' }}
+            onClick={() => navigate(`/items/${req.item?._id || req.item}`)}>
+            {req.item?.title || 'Item'}
+          </div>
+          {req.item?.category && (
+            <div style={{
+              display: 'inline-block', fontSize: 11, fontWeight: 600,
+              padding: '2px 8px', borderRadius: 20, marginBottom: 4,
+              background: 'var(--accent-subtle, rgba(99,102,241,0.15))',
+              color: 'var(--accent, #818cf8)',
+            }}>
+              {req.item.category}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+            <span style={{
+              display: 'inline-block', fontSize: 10, fontWeight: 700,
+              padding: '2px 8px', borderRadius: 20,
+              background: isOwner ? 'rgba(34,197,94,0.15)' : 'rgba(99,102,241,0.15)',
+              color: isOwner ? '#4ade80' : 'var(--accent)',
+              letterSpacing: '0.03em',
+            }}>
+              {isOwner ? '🏠 You are Owner' : '🛍️ You are Renting'}
+            </span>
+          </div>
+          <div className="request-dates">
+            <Calendar size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />
+            {start}{start && end ? ` – ${end}` : ''}
+          </div>
+          <div className="request-renter">
+            <User size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />{' '}
+            <span style={{ color: 'var(--text-3)', fontSize: 11, marginRight: 4 }}>
+              {isOwner ? 'Rented to' : 'Rented from'}
+            </span>
+            <span
+              onClick={() => otherPersonId && navigate(`/profile/${otherPersonId}`)}
+              style={{ cursor: otherPersonId ? 'pointer' : 'default', fontWeight: 600, textDecoration: otherPersonId ? 'underline' : 'none', textDecorationColor: 'var(--text-3)' }}
+              title="View profile"
+            >
+              {otherPerson || 'User'}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div className="request-price">₹{req.totalCost || '—'}</div>
+          <div className="request-price-label">total</div>
+        </div>
+      </div>
+
+      {/* ── Footer row: status + actions ── */}
+      <div className="request-footer">
+        <div className={`status-badge ${isCompleted ? 'status-completed' : 'status-accepted'}`}>
+          {isCompleted ? 'Completed' : 'Active'}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!isHistory && !isCompleted && isOwner && (
+            <button
+              className="btn-accept"
+              onClick={(e) => { e.stopPropagation(); completeRequest(req._id) }}
+            >
+              <Check size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Mark Done
+            </button>
+          )}
+          {isCompleted && (
+            <button
+              className="btn-review"
+              onClick={(e) => { e.stopPropagation(); onReview(req) }}
+            >
+              <Star size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Review
+            </button>
+          )}
+          {!isHistory && (
+            <button
+              className="btn-chat"
+              onClick={(e) => { e.stopPropagation(); navigate('/chat') }}
+            >
+              <MessageCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Chat
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Accepted & Completed Requests Tab ───────────────────────────────── */
 function AcceptedRequestsTab({ requests, loading, navigate, user, completeRequest, onReview }) {
+  const [view, setView] = useState('all')
+  const filtered =
+    view === 'owner' ? requests.filter((r) => (r.owner?._id || r.owner) === user?._id)
+    : view === 'renter' ? requests.filter((r) => (r.requester?._id || r.requester) === user?._id)
+    : requests
+
   return (
     <>
-      <div className="dash-welcome">Accepted Requests ✅</div>
-      <div className="dash-sub">Active and completed rentals — mark complete when done, then leave a review.</div>
+      <div className="dash-welcome">Accepted Requests <CheckCircle size={20} style={{ display: 'inline', verticalAlign: 'middle' }} /></div>
+      <div className="dash-sub" style={{ marginBottom: 16 }}>Active rentals — mark complete when the rental ends.</div>
+
+      <RoleToggle
+        value={view === 'all' ? 'a' : view === 'owner' ? 'b' : 'c'}
+        onChange={(v) => setView(v === 'a' ? 'all' : v === 'b' ? 'owner' : 'renter')}
+        labelA="All"
+        labelB="Items I Rented Out"
+        labelC="Items I'm Renting"
+        iconB={<ArrowUpRight size={13} />}
+        iconC={<ArrowDownLeft size={13} />}
+      />
 
       {loading ? (
         <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>Loading requests…</div>
-      ) : requests.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No accepted requests yet</div>
-          <div style={{ color: 'var(--text-3)', fontSize: 14 }}>When a request is accepted, it will appear here.</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0' }}>
+          <CheckCircle size={48} style={{ color: 'var(--text-3)', marginBottom: 12 }} />
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No accepted requests</div>
+          <div style={{ color: 'var(--text-3)', fontSize: 14 }}>
+            {view === 'owner' ? "You haven't rented out any items yet." : view === 'renter' ? "You haven't rented anything yet." : 'When a request is accepted, it will appear here.'}
+          </div>
         </div>
       ) : (
-        requests.map((req) => {
-          const emoji = getCategoryEmoji(req.item?.category)
-          const start = req.startDate ? new Date(req.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
-          const end = req.endDate ? new Date(req.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
-          const otherUser = req.requester?.name || req.owner?.name || 'User'
-          const isOwner = (req.owner?._id || req.owner) === user?._id
-          const isCompleted = req.status === 'completed'
-          return (
-            <div className="request-card" key={req._id} style={{ cursor: 'pointer' }}
-              onClick={() => navigate(`/items/${req.item?._id || req.item}`)}>
-              <div className="request-item-icon">{emoji}</div>
-              <div className="request-info">
-                <div className="request-item-name">{req.item?.title || 'Item'}</div>
-                <div className="request-dates">📅 {start} – {end}</div>
-                <div className="request-renter">👤 {otherUser}</div>
-              </div>
-              <div className="request-right">
-                <div className="request-price">${req.totalCost || '—'}</div>
-                <div className={`status-badge ${isCompleted ? 'status-completed' : 'status-accepted'}`}>
-                  {isCompleted ? 'Completed' : 'Accepted'}
-                </div>
-                <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                  {!isCompleted && isOwner && (
-                    <button
-                      className="btn-accept"
-                      style={{ padding: '6px 14px', fontSize: 12 }}
-                      onClick={(e) => { e.stopPropagation(); completeRequest(req._id) }}
-                    >
-                      ✅ Mark Complete
-                    </button>
-                  )}
-                  {isCompleted && (
-                    <button
-                      className="btn-primary"
-                      style={{ padding: '6px 14px', fontSize: 12 }}
-                      onClick={(e) => { e.stopPropagation(); onReview(req) }}
-                    >
-                      ⭐ Leave Review
-                    </button>
-                  )}
-                  <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, background: 'var(--surface-2)' }}
-                    onClick={(e) => { e.stopPropagation(); navigate('/chat') }}>
-                    💬 Chat
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })
+        filtered.map((req) => (
+          <AcceptedCard
+            key={req._id}
+            req={req}
+            user={user}
+            navigate={navigate}
+            completeRequest={completeRequest}
+            onReview={onReview}
+          />
+        ))
       )}
     </>
   )
@@ -359,14 +555,14 @@ function AcceptedRequestsTab({ requests, loading, navigate, user, completeReques
 function ReviewsTab({ reviews, loading }) {
   return (
     <>
-      <div className="dash-welcome">Reviews ⭐</div>
+      <div className="dash-welcome">Reviews <Star size={20} style={{ display:'inline', verticalAlign:'middle' }} /></div>
       <div className="dash-sub">See what people are saying about you.</div>
 
       {loading ? (
         <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>Loading reviews…</div>
       ) : reviews.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>⭐</div>
+          <div style={{ fontSize: 48, marginBottom: 12 }}><Star size={48} style={{ color: 'var(--text-3)' }} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No reviews yet</div>
           <div style={{ color: 'var(--text-3)', fontSize: 14 }}>Reviews from your renters will appear here.</div>
         </div>
@@ -375,13 +571,22 @@ function ReviewsTab({ reviews, loading }) {
           <div className="review-card" key={r._id}>
             <div className="review-header">
               <div className="review-user">
-                <div className="review-avatar">{r.reviewer?.name?.[0] || '?'}</div>
+                <div className="review-avatar" style={{ overflow: 'hidden' }}>
+                  {r.reviewer?.avatar
+                    ? <img src={r.reviewer.avatar} alt={r.reviewer.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                    : r.reviewer?.name?.[0] || '?'
+                  }
+                </div>
                 <div>
                   <div className="review-name">{r.reviewer?.name || 'Anonymous'}</div>
                   <div className="review-date">{new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
                 </div>
               </div>
-              <div className="review-stars">{'⭐'.repeat(r.rating)}</div>
+              <div className="review-stars" style={{ display:'flex', gap:2 }}>
+                {Array.from({ length: Math.min(r.rating || 0, 5) }).map((_, i) => (
+                  <Star key={i} size={14} fill="#f59e0b" color="#f59e0b" />
+                ))}
+              </div>
             </div>
             <div className="review-text">{r.comment}</div>
           </div>
@@ -391,56 +596,202 @@ function ReviewsTab({ reviews, loading }) {
   )
 }
 
+/* ── History Tab ──────────────────────────────────────────────────────── */
+function HistoryTab({ completedReceived, completedSent, loading, navigate, user, onReview }) {
+  const [view, setView] = useState('all')
+  const list =
+    view === 'owner' ? completedReceived
+    : view === 'renter' ? completedSent
+    : [...completedReceived, ...completedSent]
+  const sorted = [...list].sort((a, b) =>
+    new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+  )
+  return (
+    <>
+      <div className="dash-welcome">History <Clock size={20} style={{ display: 'inline', verticalAlign: 'middle' }} /></div>
+      <div className="dash-sub" style={{ marginBottom: 16 }}>Your completed rentals.</div>
+
+      <RoleToggle
+        value={view === 'all' ? 'a' : view === 'owner' ? 'b' : 'c'}
+        onChange={(v) => setView(v === 'a' ? 'all' : v === 'b' ? 'owner' : 'renter')}
+        labelA="All History"
+        labelB="Items I Rented Out"
+        labelC="Items I Rented"
+        iconB={<ArrowUpRight size={13} />}
+        iconC={<ArrowDownLeft size={13} />}
+      />
+
+      {loading ? (
+        <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '24px 0' }}>Loading history…</div>
+      ) : sorted.length === 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0' }}>
+          <Clock size={48} style={{ color: 'var(--text-3)', marginBottom: 12 }} />
+          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>No history yet</div>
+          <div style={{ color: 'var(--text-3)', fontSize: 14 }}>
+            {view === 'owner' ? "You haven't completed any rentals as an owner." : view === 'renter' ? "You haven't rented anything yet." : 'Completed rentals will appear here.'}
+          </div>
+        </div>
+      ) : (
+        sorted.map((req) => (
+          <AcceptedCard
+            key={req._id}
+            req={req}
+            user={user}
+            navigate={navigate}
+            onReview={onReview}
+            isHistory
+          />
+        ))
+      )}
+    </>
+  )
+}
+
+/* ── Brief Listing Row (Overview only) ────────────────────────────────── */
+function BriefListingRow({ item, onClick }) {
+  const isPaused = item.status === 'paused'
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 14px', borderRadius: 12,
+        background: 'var(--card-bg, rgba(255,255,255,0.04))',
+        border: '1px solid var(--border)',
+        cursor: 'pointer', transition: 'background 0.15s',
+        opacity: isPaused ? 0.65 : 1,
+      }}
+    >
+      <div style={{
+        width: 48, height: 48, borderRadius: 8, flexShrink: 0,
+        overflow: 'hidden', background: 'var(--bg-2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {item.images?.[0]
+          ? <img src={item.images[0]} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : getCategoryIcon(item.category)
+        }
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {item.title}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+          <MapPin size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />
+          {item.location?.city || item.location || 'Unknown'}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>
+          ₹{item.pricePerDay}<span style={{ fontWeight: 400, fontSize: 11, color: 'var(--text-3)' }}>/day</span>
+        </div>
+        <div className={`status-badge ${isPaused ? 'status-pending' : 'status-accepted'}`} style={{ marginTop: 4, display: 'inline-block' }}>
+          {isPaused ? 'paused' : 'active'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Shared Components ────────────────────────────────────────────────── */
-function RequestRow({ req, accept, reject, navigate, createRoom }) {
+function RequestRow({ req, accept, reject, navigate, createRoom, isSent = false }) {
   const isPending = req.status === 'pending'
-  const emoji = getCategoryEmoji(req.item?.category)
   const start = req.startDate ? new Date(req.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
   const end = req.endDate ? new Date(req.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
 
   const requesterId = req.requester?._id || req.requester
+  const ownerId = req.owner?._id || req.owner
+  const chatPartnerId = isSent ? ownerId : requesterId
 
   const handleChat = () => {
-    if (!requesterId) return
-    createRoom({ participantId: requesterId }, {
+    if (!chatPartnerId) return
+    createRoom({ participantId: chatPartnerId }, {
       onSuccess: (res) => navigate?.(`/chat/${res.room._id}`),
     })
   }
 
   const handleProfile = () => {
-    if (!requesterId) return
-    navigate?.(`/profile/${requesterId}`)
+    const profileId = isSent ? ownerId : requesterId
+    if (!profileId) return
+    navigate?.(`/profile/${profileId}`)
   }
 
   return (
     <div className="request-card">
-      <div className="request-item-icon">{emoji}</div>
-      <div className="request-info">
-        <div className="request-item-name">{req.item?.title || 'Item'}</div>
-        <div className="request-dates">📅 {start} – {end}</div>
-        <div className="request-renter" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          👤{' '}
-          <span
-            onClick={handleProfile}
-            style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--text-3)' }}
-            title="View profile"
+      {/* ── Top row: thumbnail + details + price ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+
+        {/* Item thumbnail */}
+        <div
+          onClick={() => req.item?._id && navigate?.(`/items/${req.item._id}`)}
+          style={{
+            width: 64, height: 64, borderRadius: 10, flexShrink: 0,
+            overflow: 'hidden', background: 'var(--bg-2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: req.item?._id ? 'pointer' : 'default',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {req.item?.images?.[0]
+            ? <img src={req.item.images[0]} alt={req.item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : getCategoryIcon(req.item?.category)
+          }
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Item name — clickable */}
+          <div
+            className="request-item-name"
+            onClick={() => req.item?._id && navigate?.(`/items/${req.item._id}`)}
+            style={{ cursor: req.item?._id ? 'pointer' : 'default' }}
+            title="View item"
           >
-            {req.requester?.name || 'Someone'}
-          </span>
+            {req.item?.title || 'Unknown Item'}
+          </div>
+          {/* Category badge */}
+          {req.item?.category && (
+            <div style={{
+              display: 'inline-block', fontSize: 11, fontWeight: 600,
+              padding: '2px 8px', borderRadius: 20, marginBottom: 4,
+              background: 'var(--accent-subtle, rgba(99,102,241,0.15))',
+              color: 'var(--accent, #818cf8)',
+            }}>
+              {req.item.category}
+            </div>
+          )}
+          <div className="request-dates"><Calendar size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {start}{start && end ? ` – ${end}` : ''}</div>
+          <div className="request-renter">
+            <User size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} />{' '}
+            <span style={{ color: 'var(--text-3)', fontSize: 11, marginRight: 4 }}>
+              {isSent ? 'Owner' : 'Requested by'}
+            </span>
+            <span
+              onClick={handleProfile}
+              style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--text-3)', fontWeight: 600 }}
+              title="View profile"
+            >
+              {isSent ? (req.owner?.name || 'Owner') : (req.requester?.name || 'Someone')}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div className="request-price">₹{req.totalCost || '—'}</div>
+          <div className="request-price-label">total</div>
         </div>
       </div>
-      <div className="request-right">
-        <div className={`status-badge ${STATUS_CLASS[req.status] || 'status-pending'}`} style={{ alignSelf: 'flex-end' }}>{req.status}</div>
-        <div className="request-price">${req.totalCost || '—'}</div>
-        {isPending && (
-          <div className="action-row">
-            <button className="btn-accept" onClick={() => accept(req._id)}>Accept</button>
-            <button className="btn-reject" onClick={() => reject({ id: req._id })}>Reject</button>
-          </div>
-        )}
-        <div className="action-row" style={{ marginTop: 6 }}>
-          <button className="btn-primary" onClick={handleChat}
-            style={{ padding: '5px 12px', fontSize: 12 }}>💬 Chat</button>
+
+      {/* ── Footer row: status + actions ── */}
+      <div className="request-footer">
+        <div className={`status-badge ${STATUS_CLASS[req.status] || 'status-pending'}`}>{req.status}</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {isPending && (
+            <>
+              <button className="btn-accept" onClick={() => accept(req._id)}><Check size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> Accept</button>
+              <button className="btn-reject" onClick={() => reject({ id: req._id })}><XIcon size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> Reject</button>
+            </>
+          )}
+          <button className="btn-chat" onClick={handleChat}><MessageCircle size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> Chat</button>
         </div>
       </div>
     </div>
@@ -449,14 +800,13 @@ function RequestRow({ req, accept, reject, navigate, createRoom }) {
 
 function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const emoji = getCategoryEmoji(item.category)
   const isPaused = item.status === 'paused'
   return (
     <div className="item-card" onClick={onClick} style={{ opacity: isPaused ? 0.7 : 1, position: 'relative' }}>
       <div className="item-img">
         {item.images?.[0]
           ? <img src={item.images[0]} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: isPaused ? 'grayscale(0.5)' : 'none' }} />
-          : <span style={{ fontSize: 52 }}>{emoji}</span>
+          : getCategoryIcon(item.category)
         }
         <div className="item-img-overlay" />
         <div className="item-badge">{item.category || 'General'}</div>
@@ -495,7 +845,7 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
               }}
               title={isPaused ? 'Resume listing' : 'Pause listing'}
             >
-              {isPaused ? '▶ Resume' : '⏸ Pause'}
+            {isPaused ? <><PlayCircle size={14} /> Resume</> : <><PauseCircle size={14} /> Pause</>}
             </button>
           )}
           {onEdit && (
@@ -509,7 +859,7 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
               }}
               title="Edit listing"
             >
-              ✏️ Edit
+              <Edit2 size={14} /> Edit
             </button>
           )}
           {onDelete && (
@@ -523,7 +873,7 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
               }}
               title="Delete listing"
             >
-              🗑️
+              <Trash2 size={14} />
             </button>
           )}
         </div>
@@ -553,7 +903,7 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
                   fontWeight: 700,
                 }}
               >
-                🗑️ Delete
+                  <Trash2 size={14} /> Delete
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
@@ -572,11 +922,11 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
       <div className="item-body">
         <div className="item-title">{item.title}</div>
         <div className="item-meta">
-          <div className="item-location">📍 {item.location?.city || item.location || 'Unknown'}</div>
-          <div className="item-rating">⭐ {(item.rating || 0) > 0 ? item.rating.toFixed(1) : 'New'}</div>
+          <div className="item-location"><MapPin size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.location?.city || item.location || 'Unknown'}</div>
+          <div className="item-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {(item.rating || 0) > 0 ? item.rating.toFixed(1) : 'New'}</div>
         </div>
         <div className="item-footer">
-          <div className="item-price">${item.pricePerDay} <span>/ day</span></div>
+          <div className="item-price">₹{item.pricePerDay} <span>/ day</span></div>
           {item.owner && typeof item.owner === 'object' && (
             <div className="item-owner">
               {item.owner.avatar ? (
@@ -602,9 +952,15 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
   )
 }
 
-function getCategoryEmoji(cat) {
-  const map = { Photography: '📷', Electronics: '🎮', 'Tools & DIY': '🔧', Outdoor: '🏕️', Sports: '🚲', Music: '🎸', Vehicles: '🚗', 'Home & Garden': '🏠', Science: '🔭', Events: '🎪' }
-  return map[cat] || '📦'
+function getCategoryIcon(cat) {
+  const map = {
+    Photography: Camera, Cameras: Camera, Electronics: Monitor,
+    'Tools & DIY': Wrench, Tools: Wrench, Outdoor: Tent, Sports: Bike,
+    Music: Music, Instruments: Music, Vehicles: Car, Spaces: Building2,
+    'Home & Garden': Building2, Science: Monitor, Events: Star, Bikes: Bike
+  }
+  const Icon = map[cat] || Package
+  return <Icon size={52} style={{ color: 'var(--text-3)' }} />
 }
 
 /* ── Review Modal ─────────────────────────────────────────────────────── */
@@ -686,15 +1042,13 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
           onMouseEnter={() => setHovered(star)}
           onMouseLeave={() => setHovered(0)}
           onClick={() => setR(star)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 26, lineHeight: 1, padding: 2,
-            filter: star <= (hovered || rating) ? 'none' : 'grayscale(1) opacity(0.35)',
+          style={{ fontSize: 26, lineHeight: 1, padding: 2, border: 'none', background: 'none', cursor: 'pointer',
+            color: star <= (hovered || rating) ? '#f59e0b' : 'var(--text-3)',
             transform: star <= (hovered || rating) ? 'scale(1.15)' : 'scale(1)',
             transition: 'all 0.15s ease',
           }}
         >
-          ⭐
+          <Star size={26} fill={star <= (hovered || rating) ? '#f59e0b' : 'none'} />
         </button>
       ))}
       {rating > 0 && (
@@ -726,7 +1080,7 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
         <button onClick={onClose} style={{
           position: 'absolute', top: 12, right: 12, background: 'none', border: 'none',
           color: 'var(--text-3)', fontSize: 20, cursor: 'pointer', lineHeight: 1,
-        }}>✕</button>
+        }}><XIcon size={20} /></button>
 
         <h3 style={{ margin: '0 0 4px', fontSize: 20, color: 'var(--text)' }}>Leave a Review</h3>
         <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text-3)' }}>
@@ -735,7 +1089,7 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
 
         {allDone && (
           <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-2)' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+            <div style={{ fontSize: 40, marginBottom: 12 }}><CheckCircle size={40} style={{ color: 'var(--success)' }} /></div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>All reviews submitted!</div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>You've already reviewed everything for this rental.</div>
           </div>
@@ -748,7 +1102,7 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
             border: '1px solid var(--border)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>📦</span>
+              <Package size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
                 Rate the Item
               </span>
@@ -777,9 +1131,9 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
             border: '1px solid var(--border)', opacity: 0.6,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>📦</span>
+              <Package size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
               <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
-                Item review submitted ✓ ({existing.item.rating}⭐)
+                Item review submitted <Check size={12} style={{display:'inline',verticalAlign:'middle'}} /> ({existing.item.rating} <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle'}} />)
               </span>
             </div>
           </div>
@@ -792,7 +1146,7 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
             border: '1px solid var(--border)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>👤</span>
+              <User size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
               <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>
                 Rate the {isOwner ? 'Renter' : 'Owner'}
               </span>
@@ -821,9 +1175,9 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
             border: '1px solid var(--border)', opacity: 0.6,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>👤</span>
+              <User size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
               <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
-                {isOwner ? 'Renter' : 'Owner'} review submitted ✓ ({existing.user.rating}⭐)
+                {isOwner ? 'Renter' : 'Owner'} review submitted <Check size={12} style={{display:'inline',verticalAlign:'middle'}} /> ({existing.user.rating} <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle'}} />)
               </span>
             </div>
           </div>

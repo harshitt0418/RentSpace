@@ -46,12 +46,23 @@ export const useSendMessage = (roomId) => {
   return useMutation({
     mutationFn: ({ content, type }) => chatApi.sendMessage(roomId, content, type),
     onSuccess: (data) => {
-      // Optimistically append to cached messages
       qc.setQueryData(chatKeys.messages(roomId), (old) => {
         if (!old) return old
         return { ...old, messages: [...(old.messages || []), data.message] }
       })
     },
     onError: (err) => toast.error(err.response?.data?.message || 'Message failed to send'),
+  })
+}
+
+export const useDeleteRoom = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (roomId) => chatApi.deleteRoom(roomId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.rooms })
+      toast.success('Conversation deleted')
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Could not delete conversation'),
   })
 }

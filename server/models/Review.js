@@ -53,10 +53,13 @@ reviewSchema.index({ reviewer: 1, request: 1, type: 1 }, { unique: true })
 
 // ── After save: update average rating on the item or user ─────────────────────
 reviewSchema.statics.updateRating = async function (targetId, targetModel) {
-  const matchField = targetModel === 'Item' ? 'item' : 'reviewee'
-  const typeFilter = targetModel === 'Item' ? 'item' : 'user'
+  const mongoose    = require('mongoose')
+  const matchField  = targetModel === 'Item' ? 'item' : 'reviewee'
+  const typeFilter  = targetModel === 'Item' ? 'item' : 'user'
+  // aggregate() does NOT auto-cast strings → must cast to ObjectId explicitly
+  const objectId    = new mongoose.Types.ObjectId(targetId.toString())
   const result = await this.aggregate([
-    { $match: { [matchField]: targetId, type: typeFilter } },
+    { $match: { [matchField]: objectId, type: typeFilter } },
     { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
   ])
   const Model = require(`./${targetModel}`)

@@ -99,8 +99,7 @@ export default function HowItWorksPage() {
           <div className="cta-title">Ready to get started?</div>
           <div className="cta-sub">Join thousands of users already sharing in your community.</div>
           <div className="cta-btns">
-            <button className="btn-primary" onClick={() => navigate('/signup')}>Create Account</button>
-            <button className="btn-ghost" onClick={() => navigate('/browse')}>Browse Items</button>
+            <button className="btn-primary" onClick={() => navigate('/browse')}>Browse Items</button>
           </div>
         </div>
       </div>

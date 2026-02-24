@@ -18,6 +18,8 @@ const chatRoomSchema = new mongoose.Schema(
     // Denormalised for fast room-list rendering
     lastMessage:   { type: String,  default: '' },
     lastMessageAt: { type: Date,    default: Date.now },
+    // Users who have "deleted" this conversation from their view
+    deletedFor:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 )

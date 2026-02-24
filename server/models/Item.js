@@ -83,6 +83,13 @@ const itemSchema = new mongoose.Schema(
       type:    Number,
       default: 0,
     },
+    // ── Minimum rental period (days) ─────────────────────────────────────
+    minRentalDays: {
+      type:    Number,
+      default: 1,
+      min:     [1, 'Minimum rental must be at least 1 day'],
+    },
+
     // ── Availability blocks (dates when item is NOT available) ───────────
     bookedDates: [
       {

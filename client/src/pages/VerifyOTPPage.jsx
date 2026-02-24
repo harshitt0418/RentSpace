@@ -116,10 +116,7 @@ export default function VerifyOTPPage() {
           {error && <div className="auth-error">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <div style={{
-              display: 'flex', gap: 10, justifyContent: 'center',
-              margin: '28px 0',
-            }}>
+            <div className="otp-row" style={{ margin: '28px 0' }}>
               {otp.map((digit, i) => (
                 <input
                   key={i}
@@ -131,12 +128,7 @@ export default function VerifyOTPPage() {
                   onChange={(e) => handleChange(i, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   onPaste={i === 0 ? handlePaste : undefined}
-                  className="form-input"
-                  style={{
-                    width: 52, height: 60, textAlign: 'center',
-                    fontSize: 24, fontWeight: 700, padding: 0,
-                    letterSpacing: 0, caretColor: 'var(--primary)',
-                  }}
+                  className="form-input otp-box"
                   autoFocus={i === 0}
                 />
               ))}

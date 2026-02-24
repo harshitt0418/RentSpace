@@ -97,6 +97,7 @@ exports.uploadAvatar = async (req, res, next) => {
 ──────────────────────────────────────────────────────────────── */
 exports.getUsers = async (req, res, next) => {
   try {
+    const Review = require('../models/Review')
     const limit = Math.min(parseInt(req.query.limit) || 30, 50)
     const users = await User.find()
       .sort({ createdAt: -1 })
@@ -111,16 +112,31 @@ exports.getUsers = async (req, res, next) => {
     ])
     const countMap = Object.fromEntries(listingCounts.map((l) => [l._id.toString(), l.count]))
 
-    const data = users.map((u) => ({
-      _id: u._id,
-      name: u.name,
-      avatar: u.avatar?.url || null,
-      bio: u.bio,
-      rating: u.rating,
-      totalReviews: u.totalReviews || 0,
-      totalListings: countMap[u._id.toString()] || 0,
-      createdAt: u.createdAt,
-    }))
+    // Compute live average ratings from Review collection (single aggregate for all users)
+    // This is the fallback for users whose stored `rating` is still 0 due to stale data
+    const liveRatings = await Review.aggregate([
+      { $match: { reviewee: { $in: userIds }, type: 'user' } },
+      { $group: { _id: '$reviewee', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ])
+    const ratingMap = Object.fromEntries(
+      liveRatings.map((r) => [r._id.toString(), { avg: Math.round(r.avg * 10) / 10, count: r.count }])
+    )
+
+    const data = users.map((u) => {
+      const live = ratingMap[u._id.toString()]
+      const rating = (u.rating && u.rating > 0) ? u.rating : (live?.avg || 0)
+      const totalReviews = u.totalReviews || live?.count || 0
+      return {
+        _id: u._id,
+        name: u.name,
+        avatar: u.avatar || null,
+        bio: u.bio,
+        rating,
+        totalReviews,
+        totalListings: countMap[u._id.toString()] || 0,
+        createdAt: u.createdAt,
+      }
+    })
 
     res.status(200).json({ success: true, data })
   } catch (err) {

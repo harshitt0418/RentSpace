@@ -9,11 +9,12 @@ const { uploadImage, deleteImage, uploadMany } = require('../services/cloudinary
 
 /* ─────────────────────────────────────────────────────────────
    GET /api/items
-   Query: page, limit, category, q (text search), minPrice, maxPrice, sort
+   Query: page, limit, category, q (text search), minPrice, maxPrice, sort,
+          lat, lng, radius (km, default 50) — geo proximity filter
 ──────────────────────────────────────────────────────────────── */
 exports.getItems = async (req, res, next) => {
   try {
-    const { page = 1, limit = 12, category, q, minPrice, maxPrice, sort, owner, excludeOwner } = req.query
+    const { page = 1, limit = 12, category, q, minPrice, maxPrice, sort, owner, excludeOwner, lat, lng, radius = 50, city } = req.query
 
     // Auto-resume items whose pausedUntil date has passed
     await Item.updateMany(
@@ -33,7 +34,29 @@ exports.getItems = async (req, res, next) => {
     if (excludeOwner) filter.owner = { $ne: excludeOwner }
 
     if (category) filter.category = category
-    if (q)         filter.$text   = { $search: q }
+
+    // Geo proximity filter: lat + lng provided → find items within radius km
+    // NOTE: $nearSphere is incompatible with $text, so when geo is active we use regex for search
+    // Only items with coordinates stored are eligible; add coordinates existence check
+    const hasGeo = lat && lng
+    if (hasGeo) {
+      filter['location.coordinates'] = {
+        $nearSphere: {
+          $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+          $maxDistance: parseFloat(radius) * 1000, // metres
+        },
+      }
+      // Fallback text search via regex (can't combine $text + $nearSphere)
+      if (q) {
+        const re = new RegExp(q.split(' ').map((w) => `(?=.*${w})`).join(''), 'i')
+        filter.$or = [{ title: re }, { description: re }]
+      }
+    } else {
+      // City name text filter — regex match on location.city
+      if (city) filter['location.city'] = { $regex: city.trim(), $options: 'i' }
+      if (q) filter.$text = { $search: q }
+    }
+
     if (minPrice || maxPrice) {
       filter.pricePerDay = {}
       if (minPrice) filter.pricePerDay.$gte = Number(minPrice)
@@ -48,12 +71,15 @@ exports.getItems = async (req, res, next) => {
       rating:     { rating: -1 },
     }
 
+    // $nearSphere returns results already sorted by distance; let that take precedence unless explicit sort chosen
+    const chosenSort = hasGeo && !sort ? null : sortMap[sort] || { createdAt: -1 }
+
     const result = await paginate(Item, filter, {
       page,
       limit,
-      sort:     sortMap[sort] || { createdAt: -1 },
+      sort:     chosenSort,
       populate: { path: 'owner', select: 'name avatar rating' },
-      select:   'title images pricePerDay category location rating totalReviews owner status pausedUntil',
+      select:   'title images pricePerDay deposit minRentalDays description tags category location rating totalReviews owner status pausedUntil',
     })
 
     res.status(200).json({ success: true, ...result })
@@ -86,7 +112,7 @@ exports.getItem = async (req, res, next) => {
 ──────────────────────────────────────────────────────────────── */
 exports.createItem = async (req, res, next) => {
   try {
-    const { title, description, category, pricePerDay, deposit, location, tags } = req.body
+    const { title, description, category, pricePerDay, deposit, location, tags, minRentalDays } = req.body
 
     // location may arrive as a JSON string (from FormData) or a plain object (from JSON body)
     let parsedLocation = location
@@ -101,6 +127,7 @@ exports.createItem = async (req, res, next) => {
       category,
       pricePerDay,
       deposit,
+      minRentalDays: minRentalDays ? Math.max(1, parseInt(minRentalDays, 10)) : 1,
       location: parsedLocation,
       tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map((t) => t.trim())) : [],
       images: [],
@@ -137,7 +164,7 @@ exports.updateItem = async (req, res, next) => {
       return next(new ApiError('Not authorised to update this item', 403))
     }
 
-    const allowed = ['title', 'description', 'category', 'pricePerDay', 'deposit', 'location', 'tags', 'status']
+    const allowed = ['title', 'description', 'category', 'pricePerDay', 'deposit', 'minRentalDays', 'location', 'tags', 'status']
     allowed.forEach((key) => { if (req.body[key] !== undefined) item[key] = req.body[key] })
 
     await item.save()

@@ -15,7 +15,8 @@ const daysBetween = (start, end) =>
 
 /* helper — create in-app notification */
 const notify = (userId, type, title, message, link, extra = {}) =>
-  Notification.create({ user: userId, type, title, message, link, ...extra }).catch(() => {})
+  Notification.create({ user: userId, type, title, message, link, ...extra })
+    .catch((err) => console.error('[notify] Failed to create notification:', err.message))
 
 /* ─────────────────────────────────────────────────────────────
    POST /api/requests
@@ -99,7 +100,7 @@ exports.getReceived = async (req, res, next) => {
       page, limit,
       sort: { createdAt: -1 },
       populate: [
-        { path: 'item',      select: 'title images pricePerDay' },
+        { path: 'item',      select: 'title images pricePerDay category' },
         { path: 'requester', select: 'name avatar rating' },
       ],
     })
@@ -120,7 +121,7 @@ exports.getSent = async (req, res, next) => {
       page, limit,
       sort: { createdAt: -1 },
       populate: [
-        { path: 'item',  select: 'title images pricePerDay' },
+        { path: 'item',  select: 'title images pricePerDay category' },
         { path: 'owner', select: 'name avatar rating' },
       ],
     })
@@ -190,7 +191,9 @@ exports.acceptRequest = async (req, res, next) => {
 ──────────────────────────────────────────────────────────────── */
 exports.rejectRequest = async (req, res, next) => {
   try {
-    const request = await Request.findById(req.params.id).populate('item requester', 'name title')
+    const request = await Request.findById(req.params.id)
+      .populate('item', 'title images')
+      .populate('requester', 'name')
     if (!request) return next(new ApiError('Request not found', 404))
     if (request.owner.toString() !== req.user._id.toString()) {
       return next(new ApiError('Not authorised', 403))
@@ -203,24 +206,31 @@ exports.rejectRequest = async (req, res, next) => {
     request.rejectionReason = req.body.rejectionReason || ''
     await request.save()
 
-    await notify(
-      request.requester._id,
-      'request_rejected',
-      'Request declined',
-      `Your request for "${request.item.title}" was declined`,
-      `/dashboard`,
-      { relatedRequest: request._id }
-    )
+    const requesterId = request.requester?._id || request.requester
+    const itemTitle   = request.item?.title || 'your item'
 
-    try {
-      const { getIO } = require('../config/socket')
-      getIO().to(`user_${request.requester._id.toString()}`).emit('notification', {
-        type: 'request_rejected',
-        title: 'Request declined',
-        message: `Your request for "${request.item.title}" was declined`,
-        link: '/dashboard',
-      })
-    } catch (_) {}
+    if (requesterId) {
+      await notify(
+        requesterId,
+        'request_rejected',
+        'Request declined',
+        `Your request for "${itemTitle}" was declined`,
+        `/dashboard`,
+        { relatedRequest: request._id, relatedItem: request.item?._id }
+      )
+
+      try {
+        const { getIO } = require('../config/socket')
+        getIO().to(`user_${requesterId.toString()}`).emit('notification', {
+          type:    'request_rejected',
+          title:   'Request declined',
+          message: `Your request for "${itemTitle}" was declined`,
+          link:    '/dashboard',
+        })
+      } catch (socketErr) {
+        console.error('[socket] Failed to emit rejection notification:', socketErr.message)
+      }
+    }
 
     res.status(200).json({ success: true, request })
   } catch (err) {
@@ -261,6 +271,18 @@ exports.cancelRequest = async (req, res, next) => {
     await notify(notifyId, 'request_cancelled', 'Request cancelled',
       `A rental request for "${request.item.title}" was cancelled`, `/dashboard`,
       { relatedRequest: request._id })
+
+    try {
+      const { getIO } = require('../config/socket')
+      getIO().to(`user_${notifyId.toString()}`).emit('notification', {
+        type:    'request_cancelled',
+        title:   'Request cancelled',
+        message: `A rental request for "${request.item.title}" was cancelled`,
+        link:    '/dashboard',
+      })
+    } catch (socketErr) {
+      console.error('[socket] Failed to emit cancellation notification:', socketErr.message)
+    }
 
     res.status(200).json({ success: true, request })
   } catch (err) {

@@ -73,6 +73,19 @@ exports.markAllRead = async (req, res, next) => {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   DELETE /api/notifications
+   Deletes ALL notifications for the authenticated user.
+──────────────────────────────────────────────────────────────── */
+exports.clearAllNotifications = async (req, res, next) => {
+  try {
+    await Notification.deleteMany({ user: req.user._id })
+    res.status(200).json({ success: true, message: 'All notifications cleared' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    DELETE /api/notifications/:id
 ──────────────────────────────────────────────────────────────── */
 exports.deleteNotification = async (req, res, next) => {

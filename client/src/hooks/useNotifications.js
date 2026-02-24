@@ -53,3 +53,17 @@ export const useDeleteNotification = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: notifKeys.all }),
   })
 }
+
+export const useClearAllNotifications = () => {
+  const qc             = useQueryClient()
+  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount)
+  return useMutation({
+    mutationFn: notifApi.clearAllNotifications,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: notifKeys.all })
+      setUnreadCount(0)
+      toast.success('All notifications cleared')
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Failed to clear notifications'),
+  })
+}

@@ -2,16 +2,17 @@
  * CommunityPage.jsx — Browse community members
  * Shows a list of active users with stats, click to view their full profile.
  */
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { MessageCircle, Star, Package, ChevronRight } from 'lucide-react'
+import { MessageCircle, Star, Package, ChevronRight, Users, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
 import { pageVariants } from '@/animations/pageVariants'
 
 const fetchUsers = () =>
-  api.get('/users', { params: { limit: 30 } }).then((r) => r.data)
+  api.get('/users', { params: { limit: 100 } }).then((r) => r.data)
 
 // Demo data used when API returns nothing
 const DEMO_MEMBERS = [
@@ -28,7 +29,15 @@ export default function CommunityPage() {
   const user = useAuthStore((s) => s.user)
   const { data, isLoading } = useQuery({ queryKey: ['community-users'], queryFn: fetchUsers, retry: false })
 
-  const members = data?.data?.length ? data.data : DEMO_MEMBERS
+  const [showAll, setShowAll] = useState(false)
+
+  const allMembers = data?.data?.length ? data.data : DEMO_MEMBERS
+  // Sort top owners: by rating desc, then by totalReviews desc
+  const sortedMembers = [...allMembers].sort((a, b) => {
+    if ((b.rating || 0) !== (a.rating || 0)) return (b.rating || 0) - (a.rating || 0)
+    return (b.totalReviews || 0) - (a.totalReviews || 0)
+  })
+  const members = showAll ? sortedMembers : sortedMembers.slice(0, 9)
 
   const getMemberYears = (date) => {
     if (!date) return '—'
@@ -55,21 +64,21 @@ export default function CommunityPage() {
       {/* Stats Bar */}
       <div className="community-stats-bar">
         <div className="community-stat-item">
-          <div className="community-stat-num">{members.length}+</div>
+          <div className="community-stat-num">{allMembers.length}+</div>
           <div className="community-stat-label">Active Members</div>
         </div>
         <div className="community-stat-item">
-          <div className="community-stat-num">{members.reduce((s, m) => s + (m.totalListings || 0), 0)}+</div>
+          <div className="community-stat-num">{allMembers.reduce((s, m) => s + (m.totalListings || 0), 0)}+</div>
           <div className="community-stat-label">Items Listed</div>
         </div>
         <div className="community-stat-item">
-          <div className="community-stat-num">{members.reduce((s, m) => s + (m.totalReviews || 0), 0)}+</div>
+          <div className="community-stat-num">{allMembers.reduce((s, m) => s + (m.totalReviews || 0), 0)}+</div>
           <div className="community-stat-label">Reviews Given</div>
         </div>
         <div className="community-stat-item">
           <div className="community-stat-num">
             {(() => {
-              const rated = members.filter((m) => m.rating && m.totalReviews > 0)
+              const rated = allMembers.filter((m) => m.rating && m.totalReviews > 0)
               return rated.length
                 ? (rated.reduce((s, m) => s + m.rating, 0) / rated.length).toFixed(1)
                 : '—'
@@ -81,8 +90,13 @@ export default function CommunityPage() {
 
       {/* Members Grid */}
       <div className="community-grid-wrapper">
-        <div className="section-header" style={{ marginBottom: 24 }}>
-          <div className="section-label" style={{ fontSize: 20 }}>Featured Members</div>
+        <div className="section-header" style={{ marginBottom: 24, alignItems: 'flex-end' }}>
+          <div>
+            <div className="section-label" style={{ fontSize: 20 }}>Top Owners</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>
+              Sorted by rating · showing {members.length} of {sortedMembers.length} members
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
@@ -143,6 +157,23 @@ export default function CommunityPage() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        )}
+
+        {/* View All / Show Less button */}
+        {!isLoading && sortedMembers.length > 9 && (
+          <div style={{ textAlign: 'center', marginTop: 36 }}>
+            <button
+              className="btn-ghost"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 28px', fontSize: 14, fontWeight: 600 }}
+              onClick={() => setShowAll((v) => !v)}
+            >
+              {showAll ? (
+                <><ChevronUp size={16} /> Show Less</>
+              ) : (
+                <><Users size={16} /> View All {sortedMembers.length} Members <ChevronDown size={16} /></>
+              )}
+            </button>
           </div>
         )}
       </div>

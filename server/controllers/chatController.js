@@ -14,7 +14,10 @@ const ApiError     = require('../utils/ApiError')
 ──────────────────────────────────────────────────────────────── */
 exports.getRooms = async (req, res, next) => {
   try {
-    const rooms = await ChatRoom.find({ participants: req.user._id })
+    const rooms = await ChatRoom.find({
+      participants: req.user._id,
+      deletedFor: { $ne: req.user._id },
+    })
       .populate('participants', 'name avatar')
       .populate('request', 'status startDate endDate')
       .sort({ lastMessageAt: -1 })
@@ -119,6 +122,40 @@ exports.createRoom = async (req, res, next) => {
    Body: { content, type? }
    Persists a message (Socket.io also handles real-time broadcast).
 ──────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   DELETE /api/chat/rooms/:roomId
+   Soft-deletes a room for the requesting user.
+──────────────────────────────────────────────────────────────── */
+exports.deleteRoom = async (req, res, next) => {
+  try {
+    const room = await ChatRoom.findById(req.params.roomId)
+    if (!room) return next(new ApiError('Chat room not found', 404))
+    const isParticipant = room.participants.some(
+      (p) => p.toString() === req.user._id.toString()
+    )
+    if (!isParticipant) return next(new ApiError('Not authorised', 403))
+
+    // Mark deleted for this user
+    await ChatRoom.findByIdAndUpdate(req.params.roomId, {
+      $addToSet: { deletedFor: req.user._id },
+    })
+
+    // If all participants deleted → purge messages + room
+    const updated = await ChatRoom.findById(req.params.roomId)
+    const remaining = updated.participants.filter(
+      (p) => !updated.deletedFor.map((d) => d.toString()).includes(p.toString())
+    )
+    if (remaining.length === 0) {
+      await Message.deleteMany({ room: room._id })
+      await ChatRoom.findByIdAndDelete(room._id)
+    }
+
+    res.status(200).json({ success: true, message: 'Conversation deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
 exports.sendMessage = async (req, res, next) => {
   try {
     const room = await ChatRoom.findById(req.params.roomId)

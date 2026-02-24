@@ -10,6 +10,25 @@ import { useUserReviews } from '@/hooks/useReviews'
 import { useCreateRoom } from '@/hooks/useChat'
 import useAuthStore from '@/store/authStore'
 import toast from 'react-hot-toast'
+import {
+  Camera, MapPin, Star, MessageCircle, Home, Edit2, X as XIcon,
+  Package, Monitor, Wrench, Tent, Music, Car, Building2, Bike, LocateFixed, Loader
+} from 'lucide-react'
+
+/* ── Reverse-geocode via OpenStreetMap Nominatim (free, no key) ── */
+async function getCityFromCoords(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en' } }
+    )
+    const data = await res.json()
+    const a = data.address || {}
+    return a.city || a.town || a.village || a.county || a.state_district || ''
+  } catch {
+    return ''
+  }
+}
 
 export default function ProfilePage() {
   const { id } = useParams()
@@ -23,6 +42,7 @@ export default function ProfilePage() {
   const [form, setForm] = useState({ name: '', bio: '', location: '' })
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [avatarFile, setAvatarFile] = useState(null)
+  const [detectingLoc, setDetectingLoc] = useState(false)
 
   const { data: profileData, isLoading: loadingProfile } = useQuery({
     queryKey: ['profile', id],
@@ -74,7 +94,11 @@ export default function ProfilePage() {
     if (r.rating >= 1 && r.rating <= 5) starCounts[r.rating - 1]++
   })
   const totalReviewCount = user?.totalReviews || reviews.length || 0
-  const avgRating = user?.rating || 0
+  // Use stored rating, but fall back to computing live from reviews if stored is 0
+  const liveAvg = reviews.length > 0
+    ? Math.round((reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length) * 10) / 10
+    : 0
+  const avgRating = (user?.rating && user.rating > 0) ? user.rating : liveAvg
 
   const openEdit = () => {
     setForm({ name: user?.name || '', bio: user?.bio || '', location: user?.location || '' })
@@ -92,8 +116,15 @@ export default function ProfilePage() {
   }
 
   const handleSave = () => {
-    if (avatarFile) saveAvatar(avatarFile)
-    saveProfile({ name: form.name.trim(), bio: form.bio.trim(), location: form.location.trim() })
+    const profilePayload = { name: form.name.trim(), bio: form.bio.trim(), location: form.location.trim() }
+    if (avatarFile) {
+      // Upload avatar first; once saved to Cloudinary + DB, then save the text fields
+      saveAvatar(avatarFile, {
+        onSuccess: () => saveProfile(profilePayload),
+      })
+    } else {
+      saveProfile(profilePayload)
+    }
   }
 
   const handleMessage = () => {
@@ -143,7 +174,7 @@ export default function ProfilePage() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>Edit Profile</div>
-              <button onClick={() => setEditOpen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
+              <button onClick={() => setEditOpen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-3)' }}><XIcon size={20} /></button>
             </div>
 
             {/* Avatar picker */}
@@ -176,7 +207,7 @@ export default function ProfilePage() {
                     alignItems: 'center', justifyContent: 'center',
                     opacity: 0, transition: 'opacity 0.2s',
                   }}>
-                    <span style={{ fontSize: 20 }}>📷</span>
+                    <Camera size={20} style={{ color: '#fff' }} />
                     <span style={{ fontSize: 10, color: '#fff', fontWeight: 600, marginTop: 2, letterSpacing: 0.3 }}>CHANGE</span>
                   </div>
                 </div>
@@ -187,7 +218,7 @@ export default function ProfilePage() {
                   background: 'var(--accent)', color: '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 13, border: '2px solid var(--card)',
-                }}>📷</div>
+                }}><Camera size={13} /></div>
                 <input id="avatar-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
               </label>
             </div>
@@ -218,12 +249,43 @@ export default function ProfilePage() {
             </div>
 
             <div className="form-group" style={{ marginBottom: 28 }}>
-              <label className="form-label">Location</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label className="form-label" style={{ margin: 0 }}>Location</label>
+                <button
+                  type="button"
+                  disabled={detectingLoc}
+                  onClick={() => {
+                    if (!navigator.geolocation) { toast.error('Geolocation not supported'); return }
+                    setDetectingLoc(true)
+                    navigator.geolocation.getCurrentPosition(
+                      async ({ coords }) => {
+                        const city = await getCityFromCoords(coords.latitude, coords.longitude)
+                        if (city) setForm((f) => ({ ...f, location: city }))
+                        else toast.error('Could not detect city — please enter manually')
+                        setDetectingLoc(false)
+                      },
+                      () => { toast.error('Location access denied'); setDetectingLoc(false) },
+                      { timeout: 8000 }
+                    )
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    background: 'none', border: '1px solid rgba(99,102,241,0.4)',
+                    borderRadius: 8, padding: '4px 10px', cursor: detectingLoc ? 'not-allowed' : 'pointer',
+                    fontSize: 12, color: '#818cf8', fontWeight: 500,
+                    opacity: detectingLoc ? 0.6 : 1, transition: 'all 0.2s',
+                  }}
+                >
+                  {detectingLoc
+                    ? <><Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> Detecting…</>
+                    : <><LocateFixed size={12} /> Detect</>}
+                </button>
+              </div>
               <input
                 className="form-input"
                 value={form.location}
                 onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                placeholder="City, Country"
+                placeholder="City, Country  — or use Detect above"
               />
             </div>
 
@@ -253,12 +315,12 @@ export default function ProfilePage() {
         <div>
           <div className="profile-name">{user.name}</div>
           {user.location && (
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 4 }}>📍 {user.location}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 4 }}><MapPin size={13} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {user.location}</div>
           )}
           <div className="profile-bio">{user.bio || 'No bio yet.'}</div>
           <div className="profile-stats">
             <div className="profile-stat">
-              <div className="profile-stat-num">⭐ {avgRating > 0 ? avgRating.toFixed(1) : '—'}</div>
+              <div className="profile-stat-num"><Star size={15} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {avgRating > 0 ? avgRating.toFixed(1) : '—'}</div>
               <div className="profile-stat-label">Rating</div>
             </div>
             <div className="profile-stat">
@@ -278,11 +340,11 @@ export default function ProfilePage() {
         <div className="profile-actions">
           {isOwner ? (
             <>
-              <button className="btn-primary" onClick={openEdit}>✏️ Edit Profile</button>
-              <button className="btn-ghost" onClick={() => navigate('/dashboard')}>🏠 Dashboard</button>
+              <button className="btn-primary" onClick={openEdit}><Edit2 size={14} style={{display:'inline',verticalAlign:'middle',marginRight:5}} /> Edit Profile</button>
+              <button className="btn-ghost" onClick={() => navigate('/dashboard')}><Home size={14} style={{display:'inline',verticalAlign:'middle',marginRight:5}} /> Dashboard</button>
             </>
           ) : (
-            <button className="btn-primary" onClick={handleMessage}>💬 Message</button>
+            <button className="btn-primary" onClick={handleMessage}><MessageCircle size={14} style={{display:'inline',verticalAlign:'middle',marginRight:5}} /> Message</button>
           )}
         </div>
       </div>
@@ -322,13 +384,20 @@ export default function ProfilePage() {
               <div className="review-card" key={r._id}>
                 <div className="review-header">
                   <div className="review-user">
-                    <div className="review-avatar">{r.reviewer?.name?.[0] || '?'}</div>
+                    <div className="review-avatar" style={{ overflow: 'hidden' }}>
+                      {r.reviewer?.avatar
+                        ? <img src={r.reviewer.avatar} alt={r.reviewer.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                        : r.reviewer?.name?.[0] || '?'
+                      }
+                    </div>
                     <div>
                       <div className="review-name">{r.reviewer?.name || 'Anonymous'}</div>
                       <div className="review-date">{new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
                     </div>
                   </div>
-                  <div className="review-stars">{'⭐'.repeat(r.rating)}</div>
+                  <div className="review-stars" style={{ display:'flex', gap:2 }}>
+                    {Array.from({ length: Math.min(r.rating || 0, 5) }).map((_, i) => <Star key={i} size={14} fill="#f59e0b" color="#f59e0b" />)}
+                  </div>
                 </div>
                 <div className="review-text">{r.comment}</div>
               </div>
@@ -342,7 +411,7 @@ export default function ProfilePage() {
 
 /* ── Compact one-line item row for profile ── */
 function CompactItemRow({ item, onClick }) {
-  const emoji = getCategoryEmoji(item.category)
+  const iconEl = getCategoryIcon(item.category)
   return (
     <div
       onClick={onClick}
@@ -363,7 +432,7 @@ function CompactItemRow({ item, onClick }) {
       }}>
         {item.images?.[0]
           ? <img src={item.images[0]} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : emoji}
+          : iconEl}
       </div>
 
       {/* Info */}
@@ -376,25 +445,26 @@ function CompactItemRow({ item, onClick }) {
             {item.category || 'General'}
           </span>
           {item.location?.city && (
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>📍 {item.location.city}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}><MapPin size={11} style={{display:'inline',verticalAlign:'middle',marginRight:2}} /> {item.location.city}</span>
           )}
         </div>
       </div>
 
       {/* Price */}
       <div style={{ flexShrink: 0, textAlign: 'right' }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>${item.pricePerDay}</div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>₹{item.pricePerDay}</div>
         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>/day</div>
       </div>
     </div>
   )
 }
 
-function getCategoryEmoji(cat) {
+function getCategoryIcon(cat) {
   const map = {
-    Photography: '📷', Cameras: '📷', Electronics: '🎮', 'Tools & DIY': '🔧', Tools: '🔧',
-    Outdoor: '🏕️', Sports: '🚲', Music: '🎸', Instruments: '🎸', Vehicles: '🚗',
-    Spaces: '🏠', Other: '📦',
+    Photography: Camera, Cameras: Camera, Electronics: Monitor,
+    'Tools & DIY': Wrench, Tools: Wrench, Outdoor: Tent, Sports: Bike,
+    Music: Music, Instruments: Music, Vehicles: Car, Spaces: Building2, Other: Package
   }
-  return map[cat] || '📦'
+  const Icon = map[cat] || Package
+  return <Icon size={24} style={{ color: 'var(--text-3)' }} />
 }

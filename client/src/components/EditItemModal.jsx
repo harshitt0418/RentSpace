@@ -155,11 +155,11 @@ export default function EditItemModal({ item, onClose, onSuccess }) {
         {/* Price + Deposit row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
           <div className="form-group">
-            <label className="form-label">Price / Day ($)</label>
+            <label className="form-label">Price / Day (₹)</label>
             <input className="form-input" type="number" name="pricePerDay" value={form.pricePerDay} onChange={set} min="1" />
           </div>
           <div className="form-group">
-            <label className="form-label">Deposit ($)</label>
+            <label className="form-label">Deposit (₹)</label>
             <input className="form-input" type="number" name="deposit" value={form.deposit} onChange={set} min="0" />
           </div>
         </div>
