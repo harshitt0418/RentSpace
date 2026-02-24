@@ -13,7 +13,10 @@ let io
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin:      process.env.CLIENT_URL || 'http://localhost:5174',
+      origin: (origin, callback) => {
+        if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) callback(null, true)
+        else callback(new Error('Not allowed'))
+      },
       credentials: true,
     },
     // Auto-reconnect ping interval

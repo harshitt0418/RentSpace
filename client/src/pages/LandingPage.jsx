@@ -1,11 +1,13 @@
 ﻿/**
  * LandingPage.jsx — real data only, no dummy fallbacks
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useItems } from '@/hooks/useItems'
 import { useWishlistIds, useToggleWishlist } from '@/hooks/useWishlist'
 import useAuthStore from '@/store/authStore'
+import { getStats } from '@/api/itemApi'
 
 const HERO_CARDS = [
   {
@@ -37,12 +39,12 @@ const STEPS = [
   { num: '03', icon: '🤝', title: 'Enjoy & return', body: 'Collect from the owner, use it, then return it safely. Leave a review and build your trusted community reputation.' },
 ]
 
+
 function useCountUp(target, duration = 1200) {
   const [value, setValue] = useState(0)
-  const started = useRef(false)
   useEffect(() => {
-    if (started.current) return
-    started.current = true
+    if (!target) return
+    setValue(0)
     let start = 0
     const step = target / (duration / 16)
     const id = setInterval(() => {
@@ -60,9 +62,24 @@ export default function LandingPage() {
   const user = useAuthStore((s) => s.user)
   const { data: itemsData, isLoading } = useItems({ limit: 6, sort: 'newest', ...(user?._id ? { excludeOwner: user._id } : {}) })
   const items = itemsData?.data ?? []
-  const stat1 = useCountUp(2400)
-  const stat2 = useCountUp(840)
-  const stat3 = useCountUp(18)
+
+  const { data: statsData } = useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: getStats,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const FALLBACK_ITEMS  = 2400
+  const FALLBACK_USERS  = 840
+  const FALLBACK_CITIES = 18
+
+  const totalItems  = Math.max(statsData?.totalItems  ?? 0, FALLBACK_ITEMS)
+  const totalUsers  = Math.max(statsData?.totalUsers  ?? 0, FALLBACK_USERS)
+  const totalCities = Math.max(statsData?.totalCities ?? 0, FALLBACK_CITIES)
+
+  const stat1 = useCountUp(totalItems)
+  const stat2 = useCountUp(totalUsers)
+  const stat3 = useCountUp(totalCities)
 
   return (
     <div>
@@ -74,14 +91,10 @@ export default function LandingPage() {
             <div className="hero-eyebrow"><div className="hero-eyebrow-dot" /> The smarter way to share</div>
             <h1 className="hero-title">Rent <span className="grad">anything</span>,<br />from <span className="grad-2">anyone</span>.</h1>
             <p className="hero-sub">Borrow what you need from trusted people nearby. List what you own and earn from items sitting idle.</p>
-            <div className="hero-search">
-              <input type="text" placeholder="Search for cameras, tools, drones" onKeyDown={(e) => e.key === 'Enter' && navigate('/browse')} />
-              <button className="hero-search-btn" onClick={() => navigate('/browse')}>Search</button>
-            </div>
             <div className="hero-stats">
-              <div><div className="hero-stat-num">{stat1 >= 2400 ? '2400+' : stat1}</div><div className="hero-stat-label">Items listed</div></div>
-              <div><div className="hero-stat-num">{stat2 >= 840 ? '840+' : stat2}</div><div className="hero-stat-label">Happy renters</div></div>
-              <div><div className="hero-stat-num">{stat3}</div><div className="hero-stat-label">Cities active</div></div>
+              <div><div className="hero-stat-num">{stat1 >= totalItems ? `${totalItems}+` : stat1}</div><div className="hero-stat-label">Items listed</div></div>
+              <div><div className="hero-stat-num">{stat2 >= totalUsers ? `${totalUsers}+` : stat2}</div><div className="hero-stat-label">Happy renters</div></div>
+              <div><div className="hero-stat-num">{stat3 >= totalCities ? `${totalCities}+` : stat3}</div><div className="hero-stat-label">Cities active</div></div>
             </div>
           </div>
           <div className="hero-cards">

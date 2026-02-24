@@ -1,19 +1,71 @@
 /**
  * SignupPage.jsx — Modern redesign with Google OAuth
  */
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useRegister } from '@/hooks/useAuth'
 
-const GOOGLE_AUTH_URL = 'http://localhost:5000/api/auth/google'
+const GOOGLE_AUTH_URL = 'http://localhost:5001/api/auth/google'
+
+/* ── Reverse‑geocode via OpenStreetMap Nominatim (free, no key) ── */
+async function getCityFromCoords(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en' } }
+    )
+    const data = await res.json()
+    const a = data.address || {}
+    return a.city || a.town || a.village || a.county || a.state_district || ''
+  } catch {
+    return ''
+  }
+}
 
 export default function SignupPage() {
-  const [form, setForm]   = useState({ firstName: '', lastName: '', email: '', password: '', city: '' })
+  const location = useLocation()
+  const warningEmail = location.state?.warningEmail
+
+  const [form, setForm]   = useState({ firstName: '', lastName: '', email: warningEmail || '', password: '', city: '' })
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
+  const [detectingLoc, setDetectingLoc] = useState(false)
   const { mutate: register, isPending: loading } = useRegister()
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
+
+  /* Auto-detect on mount — silent, only fills city if permission already granted */
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    setDetectingLoc(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const city = await getCityFromCoords(pos.coords.latitude, pos.coords.longitude)
+        if (city) setForm((p) => ({ ...p, city }))
+        setDetectingLoc(false)
+      },
+      () => setDetectingLoc(false),
+      { enableHighAccuracy: false, timeout: 8000 }
+    )
+  }, [])
+
+  /* Manual detect button */
+  const detectLocation = () => {
+    if (!navigator.geolocation) return alert('Geolocation not supported')
+    setDetectingLoc(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const city = await getCityFromCoords(pos.coords.latitude, pos.coords.longitude)
+        if (city) setForm((p) => ({ ...p, city }))
+        setDetectingLoc(false)
+      },
+      (err) => {
+        alert('Could not detect location. Please allow location access or type manually.')
+        setDetectingLoc(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -97,6 +149,16 @@ export default function SignupPage() {
             <div className="auth-divider-line" />
           </div>
 
+          {warningEmail && (
+            <div style={{
+              background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.5)',
+              borderRadius: 8, padding: '10px 14px', marginBottom: 14,
+              fontSize: 13, color: '#92400e',
+            }}>
+              <strong>{warningEmail}</strong> is not registered. Create an account below.
+            </div>
+          )}
+
           {error && <div className="auth-error">{error}</div>}
 
           <form onSubmit={handleSubmit}>
@@ -133,7 +195,33 @@ export default function SignupPage() {
             </div>
             <div className="form-group">
               <label className="form-label">Your city</label>
-              <input className="form-input" type="text" name="city" value={form.city} onChange={set} placeholder="Dehradun, Uttarakhand" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  className="form-input"
+                  type="text"
+                  name="city"
+                  value={form.city}
+                  onChange={set}
+                  placeholder={detectingLoc ? 'Detecting your city…' : 'e.g. Mumbai'}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={detectLocation}
+                  disabled={detectingLoc}
+                  style={{
+                    background: 'var(--accent)', color: '#fff', border: 'none',
+                    borderRadius: 10, padding: '0 14px', fontSize: 13, fontWeight: 600,
+                    cursor: detectingLoc ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5,
+                    opacity: detectingLoc ? 0.7 : 1,
+                  }}
+                  title="Detect my location"
+                >
+                  {detectingLoc ? '⏳' : '📍'} {detectingLoc ? 'Detecting…' : 'Detect'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Only your city is saved — never your full address.</div>
             </div>
             <button className="auth-submit" type="submit" style={{ marginTop: 4 }} disabled={loading}>
               {loading ? 'Creating account…' : "Create Account — It's free →"}

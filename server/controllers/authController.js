@@ -65,22 +65,13 @@ exports.register = async (req, res, next) => {
       emailSent = true
     } catch (emailErr) {
       console.log('⚠️  Email send failed:', emailErr.message)
-      if (process.env.NODE_ENV === 'production') {
-        return next(new ApiError('Failed to send verification email. Please try again.', 500))
-      }
-      console.log(`📧 [DEV] OTP for ${email}: ${otp}`)
+      return next(new ApiError('Failed to send verification email. Please try again.', 500))
     }
 
     const response = {
       success: true,
-      message: emailSent
-        ? 'OTP sent to your email. Please verify to complete registration.'
-        : 'Email delivery failed — use the OTP shown below (dev mode).',
+      message: 'OTP sent to your email. Please verify to complete registration.',
       email,
-    }
-    // In dev mode, include OTP in response so flow is testable without SMTP
-    if (process.env.NODE_ENV !== 'production') {
-      response.devOtp = otp
     }
     res.status(200).json(response)
   } catch (err) {
@@ -151,17 +142,10 @@ exports.resendOTP = async (req, res, next) => {
       await sendOTPEmail(email, otp)
     } catch (emailErr) {
       console.log('⚠️  Email send failed:', emailErr.message)
-      if (process.env.NODE_ENV === 'production') {
-        return next(new ApiError('Failed to send email. Please try again.', 500))
-      }
-      console.log(`📧 [DEV] Resend OTP for ${email}: ${otp}`)
+      return next(new ApiError('Failed to send email. Please try again.', 500))
     }
 
-    const response = { success: true, message: 'OTP resent to your email.' }
-    if (process.env.NODE_ENV !== 'production') {
-      response.devOtp = otp
-    }
-    res.status(200).json(response)
+    res.status(200).json({ success: true, message: 'OTP resent to your email.' })
   } catch (err) {
     next(err)
   }
@@ -178,8 +162,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     const user = await User.findOne({ email })
     if (!user) {
-      // Don't reveal whether the email exists
-      return res.status(200).json({ success: true, message: 'If that email is registered, an OTP has been sent.' })
+      return next(new ApiError('No account found with that email. Please sign up first.', 404))
     }
 
     // Google-only accounts can't reset password
@@ -194,28 +177,14 @@ exports.forgotPassword = async (req, res, next) => {
     user.resetOtpExpiry = otpExpiry
     await user.save({ validateBeforeSave: false })
 
-    let emailSent = false
     try {
       await sendPasswordResetEmail(email, otp)
-      emailSent = true
     } catch (emailErr) {
       console.log('⚠️  Email send failed:', emailErr.message)
-      if (process.env.NODE_ENV === 'production') {
-        return next(new ApiError('Failed to send reset email. Please try again.', 500))
-      }
-      console.log(`📧 [DEV] Reset OTP for ${email}: ${otp}`)
+      return next(new ApiError('Failed to send reset email. Please try again.', 500))
     }
 
-    const response = {
-      success: true,
-      message: emailSent
-        ? 'If that email is registered, an OTP has been sent.'
-        : 'Email delivery failed — use the OTP shown below (dev mode).',
-    }
-    if (process.env.NODE_ENV !== 'production') {
-      response.devOtp = otp
-    }
-    res.status(200).json(response)
+    res.status(200).json({ success: true, message: 'If that email is registered, an OTP has been sent.' })
   } catch (err) {
     next(err)
   }

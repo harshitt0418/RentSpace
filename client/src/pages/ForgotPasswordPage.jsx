@@ -2,10 +2,12 @@
  * ForgotPasswordPage.jsx — Enter email to receive reset OTP
  */
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForgotPassword } from '@/hooks/useAuth'
+import toast from 'react-hot-toast'
 
 export default function ForgotPasswordPage() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const { mutate: forgotPw, isPending: loading } = useForgotPassword()
@@ -15,7 +17,20 @@ export default function ForgotPasswordPage() {
     setError('')
     if (!email) { setError('Please enter your email.'); return }
     forgotPw({ email }, {
-      onError: (err) => setError(err.response?.data?.message || 'Something went wrong'),
+      onSuccess: () => {
+        toast.success('OTP sent! Check your email.')
+        navigate('/reset-password', { state: { email } })
+      },
+      onError: (err) => {
+        const status  = err.response?.status
+        const message = err.response?.data?.message || 'Something went wrong'
+        if (status === 404) {
+          toast.error(message)
+          navigate('/signup', { state: { warningEmail: email } })
+        } else {
+          setError(message)
+        }
+      },
     })
   }
 

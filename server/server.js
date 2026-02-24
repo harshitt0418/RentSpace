@@ -27,6 +27,8 @@ require('./config/passport')   // register Google OAuth strategy
 const passport = require('passport')
 
 // ── Route modules ─────────────────────────────────────────────────────────────
+const Item               = require('./models/Item')
+const User               = require('./models/User')
 const authRoutes         = require('./routes/authRoutes')
 const userRoutes         = require('./routes/userRoutes')
 const itemRoutes         = require('./routes/itemRoutes')
@@ -45,10 +47,15 @@ const app = express()
 app.use(helmet())
 
 // ── CORS — allow frontend origins ────────────────────────────────────────────
-app.use(cors({
-  origin:      ['http://localhost:5173', 'http://localhost:5174'],
-  credentials: true,
-}))
+const allowedOrigin = (origin, callback) => {
+  // Allow any localhost port in development; lock down in production
+  if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || origin === process.env.CLIENT_URL) {
+    callback(null, true)
+  } else {
+    callback(new Error('Not allowed by CORS'))
+  }
+}
+app.use(cors({ origin: allowedOrigin, credentials: true }))
 
 // ── Passport (stateless JWT, no session needed) ───────────────────────────────
 app.use(passport.initialize())
@@ -83,6 +90,25 @@ app.use('/api/requests',      requestRoutes)
 app.use('/api/reviews',       reviewRoutes)
 app.use('/api/chat',          chatRoutes)
 app.use('/api/notifications', notificationRoutes)
+
+// ── Public platform stats ────────────────────────────────────────────────────
+app.get('/api/stats', async (req, res) => {
+  try {
+    const [totalItems, totalUsers, cities] = await Promise.all([
+      Item.countDocuments({ status: 'active' }),
+      User.countDocuments(),
+      Item.distinct('location.city', { status: 'active' }),
+    ])
+    res.json({
+      success: true,
+      totalItems,
+      totalUsers,
+      totalCities: cities.filter(Boolean).length,
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch stats' })
+  }
+})
 
 // ── 404 handler for unknown API routes ───────────────────────────────────────
 app.use('/api/*', (req, res) => {

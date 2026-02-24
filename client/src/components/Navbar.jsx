@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LayoutDashboard, LogOut, User, Sun, Moon, Menu, X, Bell, Check, Heart } from 'lucide-react'
+import { LayoutDashboard, LogOut, User, Sun, Moon, Menu, X, Bell, Check, Heart, MessageCircle, Plus, Search } from 'lucide-react'
 
 import useAuthStore from '@/store/authStore'
 import useThemeStore from '@/store/themeStore'
@@ -17,9 +17,12 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
   const navigate = useNavigate()
   const mobileRef = useRef(null)
   const notifRef = useRef(null)
+  const searchRef = useRef(null)
 
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => !!s.user && !!s.accessToken)
@@ -40,6 +43,16 @@ export default function Navbar() {
     setMobileOpen(false)
     setUserMenuOpen(false)
     navigate(path)
+  }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    const q = searchQuery.trim()
+    if (!q) return
+    setSearchQuery('')
+    setSearchFocused(false)
+    searchRef.current?.blur()
+    navigate(`/browse?q=${encodeURIComponent(q)}`)
   }
 
   // Close mobile menu on outside click
@@ -71,17 +84,32 @@ export default function Navbar() {
   return (
     <>
       <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
-        {/* Logo */}
-        <div className="nav-logo" onClick={() => go('/')} style={{ cursor: 'pointer' }}>
-          RentSpace
+        {/* Left — Logo + Nav links */}
+        <div className="nav-left">
+          <div className="nav-logo" onClick={() => go('/')} style={{ cursor: 'pointer' }}>
+            RentSpace
+          </div>
+          <div className="nav-links">
+            <NavLink to="/browse" className="nav-link">Browse</NavLink>
+            <NavLink to="/how-it-works" className="nav-link">How It Works</NavLink>
+            <NavLink to="/community" className="nav-link">Community</NavLink>
+          </div>
         </div>
 
-        {/* Center links — desktop only */}
-        <div className="nav-links">
-          <NavLink to="/browse" className="nav-link">Browse</NavLink>
-          <NavLink to="/how-it-works" className="nav-link">How It Works</NavLink>
-          <NavLink to="/community" className="nav-link">Community</NavLink>
-        </div>
+        {/* Center — Search bar only */}
+        <form onSubmit={handleSearch} className={`nav-search-form ${searchFocused ? 'focused' : ''}`}>
+          <Search size={14} className="nav-search-icon" />
+          <input
+            ref={searchRef}
+            type="text"
+            className="nav-search-input"
+            placeholder="Search cameras, tools, bikes…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+          />
+        </form>
 
         {/* Right actions */}
         <div className="nav-actions">
@@ -93,6 +121,11 @@ export default function Navbar() {
 
           {isAuthenticated ? (
             <>
+              {/* Messages */}
+              <div className="icon-btn hide-mobile" onClick={() => go('/chat')} title="Messages" style={{ position: 'relative' }}>
+                <MessageCircle size={16} />
+              </div>
+
               {/* Wishlist icon */}
               <div className="icon-btn hide-mobile" onClick={() => go('/wishlist')} title="Wishlist" style={{ position: 'relative' }}>
                 <Heart size={16} />
@@ -177,10 +210,28 @@ export default function Navbar() {
                       transition={{ duration: 0.18 }}
                       className="user-dropdown"
                     >
+                      <div className="user-dropdown-profile">
+                        <div className="user-dropdown-avatar">
+                          {user?.avatar
+                            ? <img src={user.avatar} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                            : user?.name?.[0]?.toUpperCase() ?? 'U'
+                          }
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email}</div>
+                        </div>
+                      </div>
+                      <div className="divider" style={{ margin: '4px 0' }} />
                       <DropItem icon={<LayoutDashboard size={15} />} label="Dashboard" onClick={() => { setUserMenuOpen(false); go('/dashboard') }} />
+                      <DropItem icon={<MessageCircle size={15} />} label="Messages" onClick={() => { setUserMenuOpen(false); go('/chat') }} />
                       <DropItem icon={<Heart size={15} />} label="Wishlist" onClick={() => { setUserMenuOpen(false); go('/wishlist') }} />
                       <DropItem icon={<User size={15} />} label="Profile" onClick={() => { setUserMenuOpen(false); go(`/profile/${user?._id}`) }} />
                       <div className="divider" />
+                      <button className="nav-list-btn" style={{ width: '100%', borderRadius: 8, justifyContent: 'center', marginBottom: 4 }}
+                        onClick={() => { setUserMenuOpen(false); go('/list-item') }}>
+                        <Plus size={14} /> List an Item
+                      </button>
                       <button onClick={() => { setUserMenuOpen(false); logout() }} disabled={loggingOut}
                         className="user-dropdown-logout">
                         <LogOut size={15} />

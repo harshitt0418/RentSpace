@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLogin } from '@/hooks/useAuth'
 
-const GOOGLE_AUTH_URL = 'http://localhost:5000/api/auth/google'
+const GOOGLE_AUTH_URL = 'http://localhost:5001/api/auth/google'
 
 export default function LoginPage() {
   const [form, setForm]   = useState({ email: '', password: '' })

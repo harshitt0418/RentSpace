@@ -55,7 +55,7 @@ export const useRegister = () => {
     mutationFn: authApi.register,
     onSuccess: (data) => {
       toast.success('OTP sent to your email!', { id: 'auth-otp' })
-      navigate('/verify-otp', { state: { email: data.email, devOtp: data.devOtp } })
+      navigate('/verify-otp', { state: { email: data.email } })
     },
     onError: (err) => {
       toast.error(err.response?.data?.message || 'Registration failed')
@@ -96,17 +96,8 @@ export const useResendOTP = () => {
 
 /* ── Forgot Password ──────────────────────────────────────────────────── */
 export const useForgotPassword = () => {
-  const navigate = useNavigate()
-
   return useMutation({
     mutationFn: authApi.forgotPassword,
-    onSuccess: (data, variables) => {
-      toast.success('If that email is registered, an OTP has been sent.', { id: 'auth-forgot' })
-      navigate('/reset-password', { state: { email: variables.email, devOtp: data.devOtp } })
-    },
-    onError: (err) => {
-      toast.error(err.response?.data?.message || 'Something went wrong')
-    },
   })
 }
 

@@ -14,12 +14,13 @@ export const itemKeys = {
 }
 
 /* ── GET /items (paginated) ─────────────────────────────────────────── */
-export const useItems = (filters = {}) =>
+export const useItems = (filters = {}, options = {}) =>
   useQuery({
     queryKey: itemKeys.list(filters),
     queryFn:  () => itemApi.getItems(filters),
     staleTime: 0,
     refetchOnWindowFocus: true,
+    ...options,
   })
 
 /* ── GET /items/:id ─────────────────────────────────────────────────── */

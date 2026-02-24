@@ -31,3 +31,6 @@ export const uploadItemImages = (id, files) => {
 
 export const deleteItemImage = (id, imageUrl) =>
   api.delete(`/items/${id}/images`, { data: { imageUrl } }).then((r) => r.data)
+
+export const getStats = () =>
+  api.get('/stats').then((r) => r.data)

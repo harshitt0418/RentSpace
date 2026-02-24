@@ -68,7 +68,12 @@ export default function CommunityPage() {
         </div>
         <div className="community-stat-item">
           <div className="community-stat-num">
-            {(members.reduce((s, m) => s + (m.rating || 0), 0) / members.length).toFixed(1)}
+            {(() => {
+              const rated = members.filter((m) => m.rating && m.totalReviews > 0)
+              return rated.length
+                ? (rated.reduce((s, m) => s + m.rating, 0) / rated.length).toFixed(1)
+                : '—'
+            })()}
           </div>
           <div className="community-stat-label">Avg Rating</div>
         </div>

@@ -9,7 +9,6 @@ export default function ResetPasswordPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const email    = location.state?.email
-  const devOtp   = location.state?.devOtp
 
   const [otp, setOtp]         = useState(['', '', '', '', '', ''])
   const [password, setPassword] = useState('')
@@ -98,16 +97,6 @@ export default function ResetPasswordPage() {
           </p>
 
           {error && <div className="auth-error">{error}</div>}
-
-          {devOtp && (
-            <div style={{
-              background: 'rgba(239,68,68,0.1)', border: '1px dashed rgba(239,68,68,0.4)',
-              borderRadius: 8, padding: '12px 16px', marginBottom: 16, textAlign: 'center',
-            }}>
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>DEV MODE — Your OTP:</span>
-              <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: 6, color: '#ef4444', marginTop: 4 }}>{devOtp}</div>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit}>
             {/* OTP */ }
