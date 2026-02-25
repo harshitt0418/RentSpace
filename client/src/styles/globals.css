@@ -5862,7 +5862,7 @@ html {
   height: 14px;
 }
 
-/* ── #9: Featured items — grid on desktop, carousel on mobile ── */
+/* ── Featured items — 3-col grid on desktop, 1-col stack on mobile ── */
 .items-carousel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -5872,31 +5872,45 @@ html {
 
 .items-carousel .item-card {
   min-width: 0;
+  width: 100%;
 }
 
-@media (max-width: 900px) {
+/* On mobile: simple single-column stacked layout — no carousel */
+@media (max-width: 640px) {
   .items-carousel {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    scrollbar-width: none;
-    /* bleed outside the section's 24px horizontal padding */
-    margin-left: -24px;
-    margin-right: -24px;
-    padding: 4px 24px 16px;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    overflow-x: unset !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 4px 0 16px !important;
   }
 
-  .items-carousel::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* One card visible + clear peek of the next, at any phone size */
   .items-carousel .item-card {
-    flex: 0 0 calc(80% - 12px) !important;
-    scroll-snap-align: start;
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    scroll-snap-align: unset !important;
+  }
+}
+
+/* Tablet: 2-col grid */
+@media (min-width: 641px) and (max-width: 900px) {
+  .items-carousel {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+    overflow-x: unset !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 4px 0 16px !important;
+  }
+
+  .items-carousel .item-card {
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
 }
 
