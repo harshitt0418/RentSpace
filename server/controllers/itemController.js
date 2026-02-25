@@ -40,12 +40,13 @@ exports.getItems = async (req, res, next) => {
     // Only items with coordinates stored are eligible; add coordinates existence check
     const hasGeo = lat && lng
     if (hasGeo) {
-      // Query using GeoJSON $nearSphere on the indexed location.coordinates field
+      // Legacy $nearSphere with coordinate pair + $maxDistance in radians.
+      // This works with plain [lng, lat] arrays (2dsphere index) and does NOT
+      // require GeoJSON Point format — compatible with all existing items.
+      // Radius in radians = km / Earth radius (6371 km)
       filter['location.coordinates'] = {
-        $nearSphere: {
-          $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-          $maxDistance: parseFloat(radius) * 1000, // convert km → metres
-        },
+        $nearSphere: [parseFloat(lng), parseFloat(lat)],
+        $maxDistance: parseFloat(radius) / 6371,
       }
       // Fallback text search via regex (can't combine $text + $nearSphere)
       if (q) {

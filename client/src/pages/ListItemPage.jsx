@@ -92,13 +92,8 @@ export default function ListItemPage() {
       city: form.location,
       ...(form.locationState ? { state: form.locationState } : {}),
       ...(form.locationAddress ? { address: form.locationAddress } : {}),
-      // GeoJSON Point format required for 2dsphere $nearSphere queries
-      ...(form.coordinates ? {
-        coordinates: {
-          type: 'Point',
-          coordinates: form.coordinates, // [lng, lat] from LocationPicker
-        }
-      } : {}),
+      // Plain [lng, lat] coordinate pair — matches the 2dsphere index format
+      ...(form.coordinates ? { coordinates: form.coordinates } : {}),
     }))
     formData.append('pricePerDay', form.pricePerDay)
     if (form.deposit) formData.append('deposit', form.deposit)
