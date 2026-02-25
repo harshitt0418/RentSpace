@@ -159,8 +159,8 @@ export default function BrowsePage() {
     ...(user?._id ? { excludeOwner: user._id } : {}),
     ...(nearMe && userCoords
       ? (userCoords.lat && userCoords.lng
-          ? { lat: userCoords.lat, lng: userCoords.lng, radius: 50 }  // GPS mode
-          : { city: userCoords.label })                               // city text mode
+        ? { lat: userCoords.lat, lng: userCoords.lng, radius: 50 }  // GPS mode
+        : { city: userCoords.label })                               // city text mode
       : {}),
   }
 
@@ -188,7 +188,7 @@ export default function BrowsePage() {
 
         {/* ── Location filter ── */}
         <div className="filter-group">
-          <div className="filter-label" style={{ display:'flex', alignItems:'center', gap:6 }}><MapPin size={14} /> Location</div>
+          <div className="filter-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MapPin size={14} /> Location</div>
 
           {/* Active location pill */}
           {nearMe && userCoords ? (
@@ -221,7 +221,7 @@ export default function BrowsePage() {
               onClick={requestLocation}
               style={{ opacity: geoLoading ? 0.6 : 1, cursor: geoLoading ? 'wait' : 'pointer', marginBottom: 6 }}
             >
-              <span style={{ fontSize: 14 }}>{geoLoading ? <span style={{fontSize:12}}>…</span> : <Navigation size={14} />}</span>
+              <span style={{ fontSize: 14 }}>{geoLoading ? <span style={{ fontSize: 12 }}>…</span> : <Navigation size={14} />}</span>
               {geoLoading ? 'Detecting…' : 'Use my current location'}
             </div>
           )}
@@ -266,7 +266,7 @@ export default function BrowsePage() {
               onClick={() => setDraftCategory(c.value)}
             >
               <div className="filter-checkbox">{draftCategory === c.value ? <XIcon size={10} /> : ''}</div>
-              {c.icon ? <><c.icon size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {c.label}</> : c.label}
+              {c.icon ? <><c.icon size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {c.label}</> : c.label}
             </div>
           ))}
         </div>
@@ -295,7 +295,7 @@ export default function BrowsePage() {
               onClick={() => setDraftRating(r.value)}
             >
               <div className="filter-checkbox">{draftRating === r.value ? <XIcon size={10} /> : ''}</div>
-              <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {r.label}
+              <Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {r.label}
             </div>
           ))}
         </div>
@@ -332,7 +332,7 @@ export default function BrowsePage() {
 
         {isLoading ? (
           <div className="browse-grid">
-            {[1,2,3,4,5,6].map(i => (
+            {[1, 2, 3, 4, 5, 6].map(i => (
               <div className="skeleton" key={i}>
                 <div className="skeleton-img" />
                 <div className="skeleton-body">
@@ -384,8 +384,8 @@ function BrowseItemCard({ item, idx, onClick }) {
       <div className="item-body">
         <div className="item-title">{item.title}</div>
         <div className="item-meta">
-          <div className="item-location"><MapPin size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.location?.city || item.location || 'Unknown'}</div>
-          <div className="item-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.rating > 0 ? item.rating.toFixed(1) : 'New'}</div>
+          <div className="item-location"><MapPin size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.location?.city || item.location || 'Unknown'}</div>
+          <div className="item-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.rating > 0 ? item.rating.toFixed(1) : 'New'}</div>
         </div>
         <div className="item-footer">
           <div className="item-price">₹{item.pricePerDay} <span>/ day</span></div>
@@ -417,7 +417,7 @@ function getCategoryIcon(cat) {
     Photography: Camera, Cameras: Camera, Electronics: Monitor,
     'Tools & DIY': Wrench, Tools: Wrench, Outdoor: Tent, Sports: Tent,
     Music: Music, Instruments: Music, Vehicles: Car, Spaces: Building2,
-    'Home & Garden': Building2, Bikes: Bike, Bikes: Bike
+    'Home & Garden': Building2, Bikes: Bike
   }
   const Icon = map[cat] || Package
   return <Icon size={52} style={{ color: 'var(--text-3)' }} />
