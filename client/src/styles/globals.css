@@ -5883,15 +5883,19 @@ html {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     scrollbar-width: none;
-    padding: 4px 4px 16px;
+    /* bleed outside the section's 24px horizontal padding */
+    margin-left: -24px;
+    margin-right: -24px;
+    padding: 4px 24px 16px;
   }
 
   .items-carousel::-webkit-scrollbar {
     display: none;
   }
 
+  /* One card visible + clear peek of the next, at any phone size */
   .items-carousel .item-card {
-    flex: 0 0 min(75vw, 280px);
+    flex: 0 0 calc(80% - 12px) !important;
     scroll-snap-align: start;
   }
 }
@@ -6054,18 +6058,7 @@ html {
   }
 }
 
-/* ── Mobile carousel adjustments ── */
-@media (max-width: 640px) {
-  .items-carousel .item-card {
-    flex: 0 0 260px;
-  }
-}
 
-@media (max-width: 380px) {
-  .items-carousel .item-card {
-    flex: 0 0 240px;
-  }
-}
 
 /* ── CTA section tighter on mobile ── */
 @media (max-width: 480px) {
