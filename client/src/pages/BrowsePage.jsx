@@ -8,7 +8,7 @@ import { useWishlistIds, useToggleWishlist } from '@/hooks/useWishlist'
 import useAuthStore from '@/store/authStore'
 import {
   Search, MapPin, Star, Heart, Camera, Wrench, Tent, Monitor, Car, Bike,
-  Music, Building2, Package, Navigation, X as XIcon
+  Music, Building2, Package, Navigation, X as XIcon, SlidersHorizontal
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -176,9 +176,13 @@ export default function BrowsePage() {
 
   return (
     <div className="browse-layout">
-      {/* Mobile filter toggle */}
+      {/* Mobile filter toggle — old FAB (hidden by CSS) */}
       <button className="mobile-filter-btn icon-btn mobile-fab" onClick={() => setFilterOpen((v) => !v)}>
         <Search size={20} />
+      </button>
+      {/* Mobile filter pill — new floating pill */}
+      <button className="mobile-filter-pill" onClick={() => setFilterOpen((v) => !v)}>
+        <SlidersHorizontal size={16} /> Filter & Sort
       </button>
       {filterOpen && <div className="mobile-overlay" onClick={() => setFilterOpen(false)} style={{ zIndex: 899 }} />}
 

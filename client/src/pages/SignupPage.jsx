@@ -162,7 +162,7 @@ export default function SignupPage() {
           {error && <div className="auth-error">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="auth-name-row">
               <div className="form-group">
                 <label className="form-label">First name *</label>
                 <input className="form-input" type="text" name="firstName" value={form.firstName} onChange={set} placeholder="Alex" />

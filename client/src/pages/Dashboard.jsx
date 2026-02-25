@@ -303,7 +303,7 @@ function ListingsTab({ listings, loading, navigate, onEdit, toggleStatus, delete
           <button className="btn-primary" onClick={() => navigate('/list-item')}>List Your First Item</button>
         </div>
       ) : (
-        <div className="items-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+        <div className="items-grid">
           {listings.map((item) => (
             <ItemCard key={item._id} item={item} onClick={() => navigate(`/items/${item._id}`)} onEdit={() => onEdit(item)} toggleStatus={toggleStatus} onDelete={deleteItem} />
           ))}

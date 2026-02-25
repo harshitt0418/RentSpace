@@ -37,15 +37,15 @@ const generateRefreshToken = (userId) =>
  *  - Refresh token as an httpOnly cookie (XSS-safe)
  */
 const sendTokens = (res, user, statusCode = 200) => {
-  const accessToken  = generateAccessToken(user._id)
+  const accessToken = generateAccessToken(user._id)
   const refreshToken = generateRefreshToken(user._id)
 
   // httpOnly prevents JS access; secure flag requires HTTPS in production
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days in ms
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
   })
 
   const userData = user.toPublicProfile

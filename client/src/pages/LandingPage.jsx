@@ -1,7 +1,7 @@
 ﻿/**
  * LandingPage.jsx — real data only, no dummy fallbacks
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useItems } from '@/hooks/useItems'
@@ -70,17 +70,29 @@ export default function LandingPage() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const FALLBACK_ITEMS  = 2400
-  const FALLBACK_USERS  = 840
+  const FALLBACK_ITEMS = 2400
+  const FALLBACK_USERS = 840
   const FALLBACK_CITIES = 18
 
-  const totalItems  = Math.max(statsData?.totalItems  ?? 0, FALLBACK_ITEMS)
-  const totalUsers  = Math.max(statsData?.totalUsers  ?? 0, FALLBACK_USERS)
+  const totalItems = Math.max(statsData?.totalItems ?? 0, FALLBACK_ITEMS)
+  const totalUsers = Math.max(statsData?.totalUsers ?? 0, FALLBACK_USERS)
   const totalCities = Math.max(statsData?.totalCities ?? 0, FALLBACK_CITIES)
 
   const stat1 = useCountUp(totalItems)
   const stat2 = useCountUp(totalUsers)
   const stat3 = useCountUp(totalCities)
+
+  // Scroll-reveal observer
+  const revealRefs = useRef([])
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('revealed'); observer.unobserve(e.target) } }),
+      { threshold: 0.15 }
+    )
+    revealRefs.current.forEach((el) => el && observer.observe(el))
+    return () => observer.disconnect()
+  }, [isLoading])
+  const addRevealRef = (el) => { if (el && !revealRefs.current.includes(el)) revealRefs.current.push(el) }
 
   return (
     <div>
@@ -110,7 +122,7 @@ export default function LandingPage() {
                   <div className="hero-card-title">{c.title}</div>
                   <div className="hero-card-footer">
                     <div className="hero-card-price">₹{c.price}/day</div>
-                    <div className="hero-card-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {c.rating}</div>
+                    <div className="hero-card-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {c.rating}</div>
                   </div>
                 </div>
               </div>
@@ -119,7 +131,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <div className="section" id="how-it-works">
+      <div className="section reveal-on-scroll" id="how-it-works" ref={addRevealRef}>
         <div className="section-eyebrow">Simple Process</div>
         <div className="section-title">How RentSpace<br />works for you</div>
         <div className="steps-grid stagger">
@@ -134,31 +146,31 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <div className="section">
+      <div className="section reveal-on-scroll" ref={addRevealRef}>
         <div className="section-eyebrow">Popular Right Now</div>
         <div className="section-title">Featured items<br />near you</div>
         {isLoading ? (
-          <div className="items-grid">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="item-card">
-                <div className="item-img skeleton-img" />
-                <div className="item-body">
-                  <div className="skeleton-line" style={{ width: '70%', height: 16, marginBottom: 8 }} />
-                  <div className="skeleton-line" style={{ width: '50%', height: 12, marginBottom: 16 }} />
-                  <div className="skeleton-line" style={{ width: '40%', height: 14 }} />
+          <div className="items-carousel">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="skeleton-card" style={{ flex: '0 0 280px' }}>
+                <div className="skeleton-img" style={{ height: 200 }} />
+                <div className="skeleton-body">
+                  <div className="skeleton-line" style={{ width: '70%' }} />
+                  <div className="skeleton-line" style={{ width: '50%' }} />
+                  <div className="skeleton-line" style={{ width: '40%' }} />
                 </div>
               </div>
             ))}
           </div>
         ) : items.length > 0 ? (
           <>
-            <div className="items-grid stagger">
+            <div className="items-carousel">
               {items.map((item, i) => (
                 <ItemCard key={item._id} item={item} idx={i} onClick={() => navigate(`/items/${item._id}`)} />
               ))}
             </div>
-            <div style={{ textAlign: 'center', marginTop: 40 }}>
-              <button className="btn-ghost" style={{ padding: '12px 32px' }} onClick={() => navigate('/browse')}>View all listings </button>
+            <div style={{ textAlign: 'center', marginTop: 24 }}>
+              <button className="btn-ghost" style={{ padding: '12px 32px' }} onClick={() => navigate('/browse')}>View all listings →</button>
             </div>
           </>
         ) : (
@@ -171,7 +183,7 @@ export default function LandingPage() {
         )}
       </div>
 
-      <div className="cta-section">
+      <div className="cta-section reveal-on-scroll" ref={addRevealRef}>
         <div className="cta-title">Ready to start earning?</div>
         <div className="cta-sub">List your first item in under 5 minutes. No fees until you earn.</div>
         <div className="cta-btns">
@@ -206,8 +218,8 @@ function ItemCard({ item, idx, onClick }) {
       <div className="item-body">
         <div className="item-title">{item.title}</div>
         <div className="item-meta">
-          <div className="item-location"> <MapPin size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.location?.city || item.location || 'Unknown'}</div>
-          <div className="item-rating"> <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.rating > 0 ? item.rating.toFixed(1) : 'New'}</div>
+          <div className="item-location"> <MapPin size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.location?.city || item.location || 'Unknown'}</div>
+          <div className="item-rating"> <Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.rating > 0 ? item.rating.toFixed(1) : 'New'}</div>
         </div>
         <div className="item-footer">
           <div className="item-price">₹{item.pricePerDay} <span>/ day</span></div>

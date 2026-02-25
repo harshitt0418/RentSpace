@@ -14,6 +14,7 @@ import { useNotifications, useMarkAllRead, useClearAllNotifications } from '@/ho
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false)
+  const [navHidden, setNavHidden] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -23,6 +24,7 @@ export default function Navbar() {
   const mobileRef = useRef(null)
   const notifRef = useRef(null)
   const searchRef = useRef(null)
+  const lastScrollY = useRef(0)
 
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => !!s.user && !!s.accessToken)
@@ -35,7 +37,18 @@ export default function Navbar() {
   const notifications = notifData?.notifications || []
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 60)
+    const onScroll = () => {
+      const y = window.scrollY
+      setIsScrolled(y > 60)
+      // Auto-hide on scroll down, show on scroll up (mobile only)
+      if (window.innerWidth <= 900) {
+        if (y > lastScrollY.current && y > 100) setNavHidden(true)
+        else setNavHidden(false)
+      } else {
+        setNavHidden(false)
+      }
+      lastScrollY.current = y
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -84,7 +97,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
+      <nav className={`navbar ${isScrolled ? 'scrolled' : ''}${navHidden ? ' nav-hidden' : ''}`}>
         {/* Left — Logo + Nav links */}
         <div className="nav-left">
           <div className="nav-logo" onClick={() => go('/')} style={{ cursor: 'pointer' }}>
@@ -341,14 +354,14 @@ function DropItem({ icon, label, onClick }) {
 
 function getNotifIcon(type) {
   const map = {
-    request_received:  '📋',
-    request_accepted:  '✅',
-    request_rejected:  '❌',
+    request_received: '📋',
+    request_accepted: '✅',
+    request_rejected: '❌',
     request_cancelled: '🚫',
-    new_message:       '💬',
-    new_review:        '⭐',
-    review_reminder:   '⭐',
-    system:            '🔔',
+    new_message: '💬',
+    new_review: '⭐',
+    review_reminder: '⭐',
+    system: '🔔',
   }
   return map[type] || '🔔'
 }
