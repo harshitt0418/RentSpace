@@ -65,10 +65,10 @@ export default function ListItemPage() {
 
   const validateStep1 = () => {
     const e = {}
-    if (!form.title.trim())       e.title       = 'Title is required'
-    if (!form.category)           e.category    = 'Please select a category'
+    if (!form.title.trim()) e.title = 'Title is required'
+    if (!form.category) e.category = 'Please select a category'
     if (!form.description.trim()) e.description = 'Description is required'
-    if (!form.location.trim())    e.location    = 'Location is required'
+    if (!form.location.trim()) e.location = 'Location is required'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -85,14 +85,20 @@ export default function ListItemPage() {
 
     // Send everything — text fields + images — in one multipart request
     const formData = new FormData()
-    formData.append('title',       form.title)
-    formData.append('category',    form.category)
+    formData.append('title', form.title)
+    formData.append('category', form.category)
     formData.append('description', form.description)
-    formData.append('location',    JSON.stringify({
+    formData.append('location', JSON.stringify({
       city: form.location,
       ...(form.locationState ? { state: form.locationState } : {}),
       ...(form.locationAddress ? { address: form.locationAddress } : {}),
-      ...(form.coordinates ? { coordinates: form.coordinates } : {}),
+      // GeoJSON Point format required for 2dsphere $nearSphere queries
+      ...(form.coordinates ? {
+        coordinates: {
+          type: 'Point',
+          coordinates: form.coordinates, // [lng, lat] from LocationPicker
+        }
+      } : {}),
     }))
     formData.append('pricePerDay', form.pricePerDay)
     if (form.deposit) formData.append('deposit', form.deposit)
@@ -181,7 +187,7 @@ export default function ListItemPage() {
           </div>
           <div className="wizard-footer">
             <button className="btn-secondary" onClick={() => navigate('/dashboard')}>Cancel</button>
-              <button className="btn-primary" onClick={() => { if (validateStep1()) goStep(2) }}>Next: Photos →</button>
+            <button className="btn-primary" onClick={() => { if (validateStep1()) goStep(2) }}>Next: Photos →</button>
           </div>
         </div>
       )}
@@ -195,8 +201,10 @@ export default function ListItemPage() {
             <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--danger)', marginLeft: 6 }}>Required</span>
           </div>
           {errors.photos && (
-            <div style={{ color: 'var(--danger)', fontSize: 13, fontWeight: 500, marginBottom: 12,
-              padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <div style={{
+              color: 'var(--danger)', fontSize: 13, fontWeight: 500, marginBottom: 12,
+              padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)'
+            }}>
               ⚠️ {errors.photos}
             </div>
           )}

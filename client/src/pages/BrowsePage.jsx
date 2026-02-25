@@ -53,7 +53,7 @@ export default function BrowsePage() {
   const [cityInput, setCityInput] = useState('')
   const geoWatchRef = useRef(null)
 
-  // GPS — use device location, then reverse-geocode to city name for city filter
+  // GPS — use device location, then reverse-geocode to city name for display label
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setGeoError('Geolocation not supported by your browser')
@@ -71,12 +71,12 @@ export default function BrowsePage() {
           )
           const data = await res.json()
           const addr = data.address || {}
-          // Pick most specific available name: city > town > village > county > state
           const cityName = addr.city || addr.town || addr.village || addr.county || addr.state || 'Your location'
-          setUserCoords({ lat: null, lng: null, label: cityName })
+          // ✅ Store the REAL coordinates — used for $nearSphere 50km radius query
+          setUserCoords({ lat, lng: lon, label: cityName })
         } catch {
-          // Reverse geocode failed — fall back to generic label; no city filter
-          setUserCoords({ lat: null, lng: null, label: 'Your location' })
+          // Reverse geocode failed — still use GPS coords for proximity filter
+          setUserCoords({ lat, lng: lon, label: 'Your location' })
         }
         setNearMe(true)
         setCityInput('')

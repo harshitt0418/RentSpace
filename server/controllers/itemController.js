@@ -2,9 +2,9 @@
  * controllers/itemController.js
  * CRUD + image upload for rental listings.
  */
-const Item      = require('../models/Item')
-const ApiError  = require('../utils/ApiError')
-const paginate  = require('../utils/pagination')
+const Item = require('../models/Item')
+const ApiError = require('../utils/ApiError')
+const paginate = require('../utils/pagination')
 const { uploadImage, deleteImage, uploadMany } = require('../services/cloudinaryService')
 
 /* ─────────────────────────────────────────────────────────────
@@ -40,10 +40,11 @@ exports.getItems = async (req, res, next) => {
     // Only items with coordinates stored are eligible; add coordinates existence check
     const hasGeo = lat && lng
     if (hasGeo) {
+      // Query using GeoJSON $nearSphere on the indexed location.coordinates field
       filter['location.coordinates'] = {
         $nearSphere: {
           $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-          $maxDistance: parseFloat(radius) * 1000, // metres
+          $maxDistance: parseFloat(radius) * 1000, // convert km → metres
         },
       }
       // Fallback text search via regex (can't combine $text + $nearSphere)
@@ -64,11 +65,11 @@ exports.getItems = async (req, res, next) => {
     }
 
     const sortMap = {
-      newest:     { createdAt: -1 },
-      oldest:     { createdAt:  1 },
-      price_asc:  { pricePerDay: 1 },
+      newest: { createdAt: -1 },
+      oldest: { createdAt: 1 },
+      price_asc: { pricePerDay: 1 },
       price_desc: { pricePerDay: -1 },
-      rating:     { rating: -1 },
+      rating: { rating: -1 },
     }
 
     // $nearSphere returns results already sorted by distance; let that take precedence unless explicit sort chosen
@@ -77,9 +78,9 @@ exports.getItems = async (req, res, next) => {
     const result = await paginate(Item, filter, {
       page,
       limit,
-      sort:     chosenSort,
+      sort: chosenSort,
       populate: { path: 'owner', select: 'name avatar rating' },
-      select:   'title images pricePerDay deposit minRentalDays description tags category location rating totalReviews owner status pausedUntil',
+      select: 'title images pricePerDay deposit minRentalDays description tags category location rating totalReviews owner status pausedUntil',
     })
 
     res.status(200).json({ success: true, ...result })
@@ -136,9 +137,9 @@ exports.createItem = async (req, res, next) => {
     // Upload any images that were sent in the same multipart request
     if (req.files?.length > 0) {
       try {
-        const buffers  = req.files.map((f) => f.buffer)
+        const buffers = req.files.map((f) => f.buffer)
         const uploaded = await uploadMany(buffers, 'rentspace/items')
-        item.images    = uploaded.map((u) => u.url)
+        item.images = uploaded.map((u) => u.url)
         await item.save()
       } catch (uploadErr) {
         // Non-fatal — item was created; log but don't fail the request
@@ -214,7 +215,7 @@ exports.uploadImages = async (req, res, next) => {
     const remaining = 5 - item.images.length
     if (remaining <= 0) return next(new ApiError('Maximum 5 images already uploaded', 400))
 
-    const buffers  = req.files.slice(0, remaining).map((f) => f.buffer)
+    const buffers = req.files.slice(0, remaining).map((f) => f.buffer)
     const uploaded = await uploadMany(buffers, 'rentspace/items')
 
     item.images.push(...uploaded.map((u) => u.url))
@@ -240,7 +241,7 @@ exports.deleteImage = async (req, res, next) => {
     }
 
     const publicId = imageUrl.split('/').slice(-2).join('/').split('.')[0]
-    await deleteImage(publicId).catch(() => {})
+    await deleteImage(publicId).catch(() => { })
 
     item.images = item.images.filter((img) => img !== imageUrl)
     await item.save()
