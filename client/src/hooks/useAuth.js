@@ -16,16 +16,16 @@ import useAuthStore from '@/store/authStore'
 // a new access token, then retry the request — so by the time onSuccess fires
 // the store already has the fresh access token.
 export const useRestoreAuth = () => {
-  const user        = useAuthStore((s) => s.user)
+  const user = useAuthStore((s) => s.user)
   const accessToken = useAuthStore((s) => s.accessToken)
   const { setAuth } = useAuthStore()
 
   const query = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn:  authApi.getMe,
+    queryFn: authApi.getMe,
     // Fetch whenever a user is persisted — refreshes token if needed AND syncs profile data
-    enabled:  !!user,
-    retry:    false,
+    enabled: !!user,
+    retry: false,
     staleTime: 30_000, // re-fetch at most every 30s to keep avatar, name, etc. current
   })
 
@@ -47,15 +47,24 @@ export const useRestoreAuth = () => {
 }
 
 /* ── Register ──────────────────────────────────────────────────────────── */
-// Now registration sends OTP email — user is redirected to /verify-otp page
+// Registration either sends OTP (→ /verify-otp) or auto-verifies (→ /dashboard)
 export const useRegister = () => {
   const navigate = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
 
   return useMutation({
     mutationFn: authApi.register,
     onSuccess: (data) => {
-      toast.success('OTP sent to your email!', { id: 'auth-otp' })
-      navigate('/verify-otp', { state: { email: data.email } })
+      if (data.accessToken && data.user) {
+        // Auto-verified (email config unavailable) — log in directly
+        setAuth(data.user, data.accessToken)
+        toast.success(`Welcome, ${data.user.name?.split(' ')[0] || ''}! 🎉`, { id: 'auth-welcome' })
+        navigate('/dashboard')
+      } else {
+        // Normal OTP verification flow
+        toast.success('OTP sent to your email!', { id: 'auth-otp' })
+        navigate('/verify-otp', { state: { email: data.email } })
+      }
     },
     onError: (err) => {
       toast.error(err.response?.data?.message || 'Registration failed')
@@ -66,7 +75,7 @@ export const useRegister = () => {
 /* ── Verify OTP (completes registration) ──────────────────────────────── */
 export const useVerifyOTP = () => {
   const { setAuth } = useAuthStore()
-  const navigate    = useNavigate()
+  const navigate = useNavigate()
 
   return useMutation({
     mutationFn: authApi.verifyOTP,
@@ -120,8 +129,8 @@ export const useResetPassword = () => {
 /* ── Login ─────────────────────────────────────────────────────────────── */
 export const useLogin = () => {
   const { setAuth } = useAuthStore()
-  const navigate    = useNavigate()
-  const qc          = useQueryClient()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
 
   return useMutation({
     mutationFn: authApi.login,
@@ -140,8 +149,8 @@ export const useLogin = () => {
 /* ── Logout ────────────────────────────────────────────────────────────── */
 export const useLogout = () => {
   const { clearAuth } = useAuthStore()
-  const navigate      = useNavigate()
-  const qc            = useQueryClient()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
 
   return useMutation({
     mutationFn: authApi.logout,

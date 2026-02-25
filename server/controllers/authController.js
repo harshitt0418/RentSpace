@@ -3,12 +3,12 @@
  * Handles register, login, logout, token refresh, getMe,
  * email OTP verification, forgot/reset password.
  */
-const crypto  = require('crypto')
-const User    = require('../models/User')
+const crypto = require('crypto')
+const User = require('../models/User')
 const ApiError = require('../utils/ApiError')
 const { generateAccessToken, generateRefreshToken, sendTokens } = require('../utils/generateToken')
 const { sendOTPEmail, sendPasswordResetEmail } = require('../utils/sendEmail')
-const jwt     = require('jsonwebtoken')
+const jwt = require('jsonwebtoken')
 
 /* ───────── helpers ───────── */
 const clearRefreshCookie = (res) =>
@@ -17,9 +17,9 @@ const clearRefreshCookie = (res) =>
 const setRefreshCookie = (res, token) => {
   res.cookie('refreshToken', token, {
     httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge:   7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   })
 }
 
@@ -41,16 +41,16 @@ exports.register = async (req, res, next) => {
     }
 
     // Generate OTP
-    const otp       = generateOTP()
+    const otp = generateOTP()
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 min
 
     let user
     if (existing && !existing.isVerified) {
       // Update existing unverified user
-      existing.name     = name
+      existing.name = name
       existing.password = password
       existing.location = location || ''
-      existing.otp      = otp
+      existing.otp = otp
       existing.otpExpiry = otpExpiry
       await existing.save()
       user = existing
@@ -58,22 +58,34 @@ exports.register = async (req, res, next) => {
       user = await User.create({ name, email, password, location: location || '', otp, otpExpiry })
     }
 
-    // Send OTP email (skip in dev if SMTP fails)
+    // Send OTP email — if it fails, auto-verify so signup isn't blocked
     let emailSent = false
     try {
       await sendOTPEmail(email, otp)
       emailSent = true
     } catch (emailErr) {
       console.log('⚠️  Email send failed:', emailErr.message)
-      return next(new ApiError('Failed to send verification email. Please try again.', 500))
+      console.log('   ↳ Auto-verifying user so signup is not blocked')
     }
 
-    const response = {
-      success: true,
-      message: 'OTP sent to your email. Please verify to complete registration.',
-      email,
+    if (emailSent) {
+      // Normal flow: user must verify via OTP
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent to your email. Please verify to complete registration.',
+        email,
+      })
     }
-    res.status(200).json(response)
+
+    // Fallback: email failed — auto-verify and log the user in directly
+    user.isVerified = true
+    user.otp = undefined
+    user.otpExpiry = undefined
+    const refreshToken = generateRefreshToken(user._id)
+    user.refreshToken = refreshToken
+    await user.save({ validateBeforeSave: false })
+
+    sendTokens(res, user, 201)
   } catch (err) {
     next(err)
   }
@@ -107,8 +119,8 @@ exports.verifyOTP = async (req, res, next) => {
 
     // Mark verified, clear OTP
     user.isVerified = true
-    user.otp        = undefined
-    user.otpExpiry  = undefined
+    user.otp = undefined
+    user.otpExpiry = undefined
     await user.save({ validateBeforeSave: false })
 
     sendTokens(res, user, 201)
@@ -131,10 +143,10 @@ exports.resendOTP = async (req, res, next) => {
 
     if (user.isVerified) return next(new ApiError('Email already verified', 400))
 
-    const otp       = generateOTP()
+    const otp = generateOTP()
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000)
 
-    user.otp       = otp
+    user.otp = otp
     user.otpExpiry = otpExpiry
     await user.save({ validateBeforeSave: false })
 
@@ -170,10 +182,10 @@ exports.forgotPassword = async (req, res, next) => {
       return next(new ApiError('This account uses Google sign-in. Please use "Continue with Google".', 400))
     }
 
-    const otp       = generateOTP()
+    const otp = generateOTP()
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000)
 
-    user.resetOtp       = otp
+    user.resetOtp = otp
     user.resetOtpExpiry = otpExpiry
     await user.save({ validateBeforeSave: false })
 
@@ -214,8 +226,8 @@ exports.resetPassword = async (req, res, next) => {
       return next(new ApiError('Invalid OTP', 400))
     }
 
-    user.password       = newPassword
-    user.resetOtp       = undefined
+    user.password = newPassword
+    user.resetOtp = undefined
     user.resetOtpExpiry = undefined
     await user.save()
 
@@ -252,7 +264,7 @@ exports.login = async (req, res, next) => {
 
     // Persist refresh token on the user document
     const refreshToken = generateRefreshToken(user._id)
-    user.refreshToken  = refreshToken
+    user.refreshToken = refreshToken
     await user.save({ validateBeforeSave: false })
 
     sendTokens(res, user)
@@ -302,8 +314,8 @@ exports.refreshToken = async (req, res, next) => {
     }
 
     // Rotate: issue new pair
-    const newRefresh    = generateRefreshToken(user._id)
-    user.refreshToken   = newRefresh
+    const newRefresh = generateRefreshToken(user._id)
+    user.refreshToken = newRefresh
     await user.save({ validateBeforeSave: false })
 
     sendTokens(res, user)
@@ -333,13 +345,13 @@ exports.googleCallback = async (req, res, next) => {
   try {
     const user = req.user          // set by passport strategy
     const refreshToken = generateRefreshToken(user._id)
-    user.refreshToken  = refreshToken
+    user.refreshToken = refreshToken
     await user.save({ validateBeforeSave: false })
 
     setRefreshCookie(res, refreshToken)
 
     const accessToken = generateAccessToken(user._id)
-    const clientURL   = process.env.CLIENT_URL || 'http://localhost:5173'
+    const clientURL = process.env.CLIENT_URL || 'http://localhost:5173'
     res.redirect(`${clientURL}/auth/callback?token=${accessToken}`)
   } catch (err) {
     next(err)
