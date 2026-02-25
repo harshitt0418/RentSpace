@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import useAuthStore from '@/store/authStore'
 import { getMe } from '@/api/authApi'
-import { useReceivedRequests, useSentRequests, useAcceptRequest, useRejectRequest, useCompleteRequest } from '@/hooks/useRequests'
+import { useReceivedRequests, useSentRequests, useAcceptRequest, useRejectRequest, useCancelRequest, useCompleteRequest } from '@/hooks/useRequests'
 import { useCreateReview, useMyRequestReviews } from '@/hooks/useReviews'
 import { useItems, useToggleItemStatus, useDeleteItem } from '@/hooks/useItems'
 import { useUserReviews } from '@/hooks/useReviews'
@@ -44,7 +44,7 @@ export default function Dashboard() {
 
   // Sync fresh user data (avatar, name, etc.) from server on every Dashboard visit
   useEffect(() => {
-    getMe().then((res) => { if (res?.user) setUser(res.user) }).catch(() => {})
+    getMe().then((res) => { if (res?.user) setUser(res.user) }).catch(() => { })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const validTabs = ['overview', 'listings', 'requests', 'accepted', 'history', 'reviews']
@@ -60,6 +60,7 @@ export default function Dashboard() {
   const { data: reviewsData, isLoading: loadingReviews } = useUserReviews(user?._id)
   const { mutate: accept } = useAcceptRequest()
   const { mutate: reject } = useRejectRequest()
+  const { mutate: cancelReq } = useCancelRequest()
   const { mutate: createRoom } = useCreateRoom()
   const { mutate: toggleStatus } = useToggleItemStatus()
   const { mutate: deleteItem } = useDeleteItem()
@@ -168,7 +169,7 @@ export default function Dashboard() {
             requests={requests}
             sentRequests={sentRequests}
             loading={loadingRequests || loadingSent}
-            accept={accept} reject={reject} navigate={navigate} createRoom={createRoom}
+            accept={accept} reject={reject} cancelReq={cancelReq} navigate={navigate} createRoom={createRoom}
           />
         )}
         {activeTab === 'accepted' && (
@@ -284,7 +285,7 @@ function OverviewTab({ user, listings, pendingCount, loadingListings, navigate, 
 function ListingsTab({ listings, loading, navigate, onEdit, toggleStatus, deleteItem }) {
   return (
     <>
-      <div className="dash-welcome">My Listings <Package size={20} style={{ display:'inline', verticalAlign:'middle' }} /></div>
+      <div className="dash-welcome">My Listings <Package size={20} style={{ display: 'inline', verticalAlign: 'middle' }} /></div>
       <div className="dash-sub">All your listed items in one place.</div>
 
       <div className="section-header" style={{ marginTop: 16 }}>
@@ -344,14 +345,14 @@ function RoleToggle({ value, onChange, labelA, labelB, labelC, iconA, iconB, ico
 }
 
 /* ── Requests Tab ─────────────────────────────────────────────────────── */
-function RequestsTab({ requests, sentRequests, loading, accept, reject, navigate, createRoom }) {
+function RequestsTab({ requests, sentRequests, loading, accept, reject, cancelReq, navigate, createRoom }) {
   const [view, setView] = useState('received')
   const list = view === 'received' ? requests : sentRequests
   const isEmpty = list.length === 0
 
   return (
     <>
-      <div className="dash-welcome">Requests <ClipboardList size={20} style={{ display:'inline', verticalAlign:'middle' }} /></div>
+      <div className="dash-welcome">Requests <ClipboardList size={20} style={{ display: 'inline', verticalAlign: 'middle' }} /></div>
       <div className="dash-sub" style={{ marginBottom: 16 }}>View incoming and outgoing rental requests.</div>
 
       <RoleToggle
@@ -381,6 +382,7 @@ function RequestsTab({ requests, sentRequests, loading, accept, reject, navigate
             key={req._id} req={req}
             accept={view === 'received' ? accept : undefined}
             reject={view === 'received' ? reject : undefined}
+            cancelReq={view === 'sent' ? cancelReq : undefined}
             navigate={navigate} createRoom={createRoom}
             isSent={view === 'sent'}
           />
@@ -508,8 +510,8 @@ function AcceptedRequestsTab({ requests, loading, navigate, user, completeReques
   const [view, setView] = useState('all')
   const filtered =
     view === 'owner' ? requests.filter((r) => (r.owner?._id || r.owner) === user?._id)
-    : view === 'renter' ? requests.filter((r) => (r.requester?._id || r.requester) === user?._id)
-    : requests
+      : view === 'renter' ? requests.filter((r) => (r.requester?._id || r.requester) === user?._id)
+        : requests
 
   return (
     <>
@@ -555,7 +557,7 @@ function AcceptedRequestsTab({ requests, loading, navigate, user, completeReques
 function ReviewsTab({ reviews, loading }) {
   return (
     <>
-      <div className="dash-welcome">Reviews <Star size={20} style={{ display:'inline', verticalAlign:'middle' }} /></div>
+      <div className="dash-welcome">Reviews <Star size={20} style={{ display: 'inline', verticalAlign: 'middle' }} /></div>
       <div className="dash-sub">See what people are saying about you.</div>
 
       {loading ? (
@@ -582,7 +584,7 @@ function ReviewsTab({ reviews, loading }) {
                   <div className="review-date">{new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
                 </div>
               </div>
-              <div className="review-stars" style={{ display:'flex', gap:2 }}>
+              <div className="review-stars" style={{ display: 'flex', gap: 2 }}>
                 {Array.from({ length: Math.min(r.rating || 0, 5) }).map((_, i) => (
                   <Star key={i} size={14} fill="#f59e0b" color="#f59e0b" />
                 ))}
@@ -601,8 +603,8 @@ function HistoryTab({ completedReceived, completedSent, loading, navigate, user,
   const [view, setView] = useState('all')
   const list =
     view === 'owner' ? completedReceived
-    : view === 'renter' ? completedSent
-    : [...completedReceived, ...completedSent]
+      : view === 'renter' ? completedSent
+        : [...completedReceived, ...completedSent]
   const sorted = [...list].sort((a, b) =>
     new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
   )
@@ -694,10 +696,18 @@ function BriefListingRow({ item, onClick }) {
 }
 
 /* ── Shared Components ────────────────────────────────────────────────── */
-function RequestRow({ req, accept, reject, navigate, createRoom, isSent = false }) {
+function RequestRow({ req, accept, reject, cancelReq, navigate, createRoom, isSent = false }) {
   const isPending = req.status === 'pending'
+  const isActive = ['pending', 'accepted'].includes(req.status)
   const start = req.startDate ? new Date(req.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
   const end = req.endDate ? new Date(req.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
+
+  // 48-hour cancellation guard for sent requests
+  const hoursUntilCheckin = req.startDate
+    ? (new Date(req.startDate).getTime() - Date.now()) / (1000 * 60 * 60)
+    : Infinity
+  const canCancel = isSent && isActive && hoursUntilCheckin >= 48
+  const cancelBlocked = isSent && isActive && hoursUntilCheckin < 48
 
   const requesterId = req.requester?._id || req.requester
   const ownerId = req.owner?._id || req.owner
@@ -759,9 +769,9 @@ function RequestRow({ req, accept, reject, navigate, createRoom, isSent = false 
               {req.item.category}
             </div>
           )}
-          <div className="request-dates"><Calendar size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {start}{start && end ? ` – ${end}` : ''}</div>
+          <div className="request-dates"><Calendar size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {start}{start && end ? ` – ${end}` : ''}</div>
           <div className="request-renter">
-            <User size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} />{' '}
+            <User size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />{' '}
             <span style={{ color: 'var(--text-3)', fontSize: 11, marginRight: 4 }}>
               {isSent ? 'Owner' : 'Requested by'}
             </span>
@@ -784,14 +794,28 @@ function RequestRow({ req, accept, reject, navigate, createRoom, isSent = false 
       {/* ── Footer row: status + actions ── */}
       <div className="request-footer">
         <div className={`status-badge ${STATUS_CLASS[req.status] || 'status-pending'}`}>{req.status}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {isPending && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Received requests: Accept / Reject */}
+          {!isSent && isPending && (
             <>
-              <button className="btn-accept" onClick={() => accept(req._id)}><Check size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> Accept</button>
-              <button className="btn-reject" onClick={() => reject({ id: req._id })}><XIcon size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> Reject</button>
+              <button className="btn-accept" onClick={() => accept(req._id)}><Check size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Accept</button>
+              <button className="btn-reject" onClick={() => reject({ id: req._id })}><XIcon size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Reject</button>
             </>
           )}
-          <button className="btn-chat" onClick={handleChat}><MessageCircle size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> Chat</button>
+          {/* Sent requests: Cancel (48hr guard) */}
+          {isSent && isActive && (
+            <button
+              className="btn-reject"
+              disabled={cancelBlocked}
+              title={cancelBlocked ? 'Cannot cancel within 48 hours of check-in' : 'Cancel this request'}
+              style={{ opacity: cancelBlocked ? 0.45 : 1, cursor: cancelBlocked ? 'not-allowed' : 'pointer' }}
+              onClick={() => canCancel && cancelReq(req._id)}
+            >
+              <XIcon size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />
+              {cancelBlocked ? 'Too late to cancel' : 'Cancel Request'}
+            </button>
+          )}
+          <button className="btn-chat" onClick={handleChat}><MessageCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> Chat</button>
         </div>
       </div>
     </div>
@@ -845,7 +869,7 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
               }}
               title={isPaused ? 'Resume listing' : 'Pause listing'}
             >
-            {isPaused ? <><PlayCircle size={14} /> Resume</> : <><PauseCircle size={14} /> Pause</>}
+              {isPaused ? <><PlayCircle size={14} /> Resume</> : <><PauseCircle size={14} /> Pause</>}
             </button>
           )}
           {onEdit && (
@@ -903,7 +927,7 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
                   fontWeight: 700,
                 }}
               >
-                  <Trash2 size={14} /> Delete
+                <Trash2 size={14} /> Delete
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
@@ -922,8 +946,8 @@ function ItemCard({ item, onClick, onEdit, toggleStatus, onDelete }) {
       <div className="item-body">
         <div className="item-title">{item.title}</div>
         <div className="item-meta">
-          <div className="item-location"><MapPin size={12} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.location?.city || item.location || 'Unknown'}</div>
-          <div className="item-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {(item.rating || 0) > 0 ? item.rating.toFixed(1) : 'New'}</div>
+          <div className="item-location"><MapPin size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.location?.city || item.location || 'Unknown'}</div>
+          <div className="item-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {(item.rating || 0) > 0 ? item.rating.toFixed(1) : 'New'}</div>
         </div>
         <div className="item-footer">
           <div className="item-price">₹{item.pricePerDay} <span>/ day</span></div>
@@ -1042,7 +1066,8 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
           onMouseEnter={() => setHovered(star)}
           onMouseLeave={() => setHovered(0)}
           onClick={() => setR(star)}
-          style={{ fontSize: 26, lineHeight: 1, padding: 2, border: 'none', background: 'none', cursor: 'pointer',
+          style={{
+            fontSize: 26, lineHeight: 1, padding: 2, border: 'none', background: 'none', cursor: 'pointer',
             color: star <= (hovered || rating) ? '#f59e0b' : 'var(--text-3)',
             transform: star <= (hovered || rating) ? 'scale(1.15)' : 'scale(1)',
             transition: 'all 0.15s ease',
@@ -1133,7 +1158,7 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Package size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
               <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
-                Item review submitted <Check size={12} style={{display:'inline',verticalAlign:'middle'}} /> ({existing.item.rating} <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle'}} />)
+                Item review submitted <Check size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ({existing.item.rating} <Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle' }} />)
               </span>
             </div>
           </div>
@@ -1177,7 +1202,7 @@ function ReviewModal({ request, user, onSubmit, submitting, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <User size={18} style={{ color: 'var(--text-3)', flexShrink: 0 }} />
               <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
-                {isOwner ? 'Renter' : 'Owner'} review submitted <Check size={12} style={{display:'inline',verticalAlign:'middle'}} /> ({existing.user.rating} <Star size={12} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle'}} />)
+                {isOwner ? 'Renter' : 'Owner'} review submitted <Check size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> ({existing.user.rating} <Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle' }} />)
               </span>
             </div>
           </div>

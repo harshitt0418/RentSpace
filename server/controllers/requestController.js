@@ -2,12 +2,12 @@
  * controllers/requestController.js
  * Rental request lifecycle: send → accept/reject → cancel/complete.
  */
-const Request      = require('../models/Request')
-const Item         = require('../models/Item')
-const User         = require('../models/User')
+const Request = require('../models/Request')
+const Item = require('../models/Item')
+const User = require('../models/User')
 const Notification = require('../models/Notification')
-const ApiError     = require('../utils/ApiError')
-const paginate     = require('../utils/pagination')
+const ApiError = require('../utils/ApiError')
+const paginate = require('../utils/pagination')
 
 /* helper — diff in days (inclusive) */
 const daysBetween = (start, end) =>
@@ -32,8 +32,8 @@ exports.sendRequest = async (req, res, next) => {
       return next(new ApiError('You cannot rent your own item', 400))
     }
 
-    const start    = new Date(startDate)
-    const end      = new Date(endDate)
+    const start = new Date(startDate)
+    const end = new Date(endDate)
     if (start >= end) return next(new ApiError('End date must be after start date', 400))
 
     // Check for date conflicts
@@ -44,16 +44,16 @@ exports.sendRequest = async (req, res, next) => {
     })
     if (conflict) return next(new ApiError('Item is not available for the selected dates', 409))
 
-    const totalDays  = daysBetween(start, end)
-    const totalCost  = totalDays * item.pricePerDay
-    const deposit    = item.deposit || 0
+    const totalDays = daysBetween(start, end)
+    const totalCost = totalDays * item.pricePerDay
+    const deposit = item.deposit || 0
 
     const request = await Request.create({
-      item:      itemId,
+      item: itemId,
       requester: req.user._id,
-      owner:     item.owner,
+      owner: item.owner,
       startDate: start,
-      endDate:   end,
+      endDate: end,
       totalDays,
       totalCost,
       deposit,
@@ -100,7 +100,7 @@ exports.getReceived = async (req, res, next) => {
       page, limit,
       sort: { createdAt: -1 },
       populate: [
-        { path: 'item',      select: 'title images pricePerDay category' },
+        { path: 'item', select: 'title images pricePerDay category' },
         { path: 'requester', select: 'name avatar rating' },
       ],
     })
@@ -121,7 +121,7 @@ exports.getSent = async (req, res, next) => {
       page, limit,
       sort: { createdAt: -1 },
       populate: [
-        { path: 'item',  select: 'title images pricePerDay category' },
+        { path: 'item', select: 'title images pricePerDay category' },
         { path: 'owner', select: 'name avatar rating' },
       ],
     })
@@ -157,7 +157,7 @@ exports.acceptRequest = async (req, res, next) => {
     // Block dates on item & auto-pause until the rental ends
     await Item.findByIdAndUpdate(request.item._id, {
       $push: { bookedDates: { startDate: request.startDate, endDate: request.endDate } },
-      $set:  { status: 'paused', pausedUntil: request.endDate },
+      $set: { status: 'paused', pausedUntil: request.endDate },
     })
 
     await notify(
@@ -177,7 +177,7 @@ exports.acceptRequest = async (req, res, next) => {
         message: `Your request for "${request.item.title}" was accepted`,
         link: '/dashboard',
       })
-    } catch (_) {}
+    } catch (_) { }
 
     res.status(200).json({ success: true, request })
   } catch (err) {
@@ -202,12 +202,12 @@ exports.rejectRequest = async (req, res, next) => {
       return next(new ApiError(`Cannot reject a ${request.status} request`, 400))
     }
 
-    request.status          = 'rejected'
+    request.status = 'rejected'
     request.rejectionReason = req.body.rejectionReason || ''
     await request.save()
 
     const requesterId = request.requester?._id || request.requester
-    const itemTitle   = request.item?.title || 'your item'
+    const itemTitle = request.item?.title || 'your item'
 
     if (requesterId) {
       await notify(
@@ -222,10 +222,10 @@ exports.rejectRequest = async (req, res, next) => {
       try {
         const { getIO } = require('../config/socket')
         getIO().to(`user_${requesterId.toString()}`).emit('notification', {
-          type:    'request_rejected',
-          title:   'Request declined',
+          type: 'request_rejected',
+          title: 'Request declined',
           message: `Your request for "${itemTitle}" was declined`,
-          link:    '/dashboard',
+          link: '/dashboard',
         })
       } catch (socketErr) {
         console.error('[socket] Failed to emit rejection notification:', socketErr.message)
@@ -247,12 +247,19 @@ exports.cancelRequest = async (req, res, next) => {
     const request = await Request.findById(req.params.id).populate('item', 'title')
     if (!request) return next(new ApiError('Request not found', 404))
 
-    const isOwner     = request.owner.toString()     === req.user._id.toString()
+    const isOwner = request.owner.toString() === req.user._id.toString()
     const isRequester = request.requester.toString() === req.user._id.toString()
     if (!isOwner && !isRequester) return next(new ApiError('Not authorised', 403))
 
     if (!['pending', 'accepted'].includes(request.status)) {
       return next(new ApiError(`Cannot cancel a ${request.status} request`, 400))
+    }
+
+    // Block cancellation if check-in is less than 48 hours away
+    const msUntilCheckin = new Date(request.startDate).getTime() - Date.now()
+    const hoursUntilCheckin = msUntilCheckin / (1000 * 60 * 60)
+    if (hoursUntilCheckin < 48) {
+      return next(new ApiError('Cannot cancel within 48 hours of check-in date', 400))
     }
 
     const wasPreviouslyAccepted = request.status === 'accepted'
@@ -263,7 +270,7 @@ exports.cancelRequest = async (req, res, next) => {
     if (wasPreviouslyAccepted) {
       await Item.findByIdAndUpdate(request.item._id, {
         $pull: { bookedDates: { startDate: request.startDate, endDate: request.endDate } },
-        $set:  { status: 'active', pausedUntil: null },
+        $set: { status: 'active', pausedUntil: null },
       })
     }
 
@@ -275,10 +282,10 @@ exports.cancelRequest = async (req, res, next) => {
     try {
       const { getIO } = require('../config/socket')
       getIO().to(`user_${notifyId.toString()}`).emit('notification', {
-        type:    'request_cancelled',
-        title:   'Request cancelled',
+        type: 'request_cancelled',
+        title: 'Request cancelled',
         message: `A rental request for "${request.item.title}" was cancelled`,
-        link:    '/dashboard',
+        link: '/dashboard',
       })
     } catch (socketErr) {
       console.error('[socket] Failed to emit cancellation notification:', socketErr.message)
