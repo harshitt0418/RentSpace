@@ -5877,12 +5877,13 @@ html {
 @media (max-width: 900px) {
   .items-carousel {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
     scrollbar-width: none;
+    padding: 4px 4px 16px;
   }
 
   .items-carousel::-webkit-scrollbar {
@@ -5890,7 +5891,7 @@ html {
   }
 
   .items-carousel .item-card {
-    flex: 0 0 280px;
+    flex: 0 0 min(75vw, 280px);
     scroll-snap-align: start;
   }
 }
