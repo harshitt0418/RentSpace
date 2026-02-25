@@ -20,6 +20,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const navigate = useNavigate()
   const mobileRef = useRef(null)
   const notifRef = useRef(null)
@@ -258,7 +259,7 @@ export default function Navbar() {
                         onClick={() => { setUserMenuOpen(false); go('/list-item') }}>
                         <Plus size={14} /> List an Item
                       </button>
-                      <button onClick={() => { setUserMenuOpen(false); logout() }} disabled={loggingOut}
+                      <button onClick={() => { setUserMenuOpen(false); setShowLogoutConfirm(true) }} disabled={loggingOut}
                         className="user-dropdown-logout">
                         <LogOut size={15} />
                         {loggingOut ? 'Signing out…' : 'Sign out'}
@@ -321,7 +322,7 @@ export default function Navbar() {
                     <button className="mobile-nav-link" onClick={() => go(`/profile/${user?._id}`)}>👤 Profile</button>
                     <div className="divider" />
                     <button className="mobile-nav-link" style={{ color: 'var(--danger)' }}
-                      onClick={() => { setMobileOpen(false); logout() }} disabled={loggingOut}>
+                      onClick={() => { setMobileOpen(false); setShowLogoutConfirm(true) }} disabled={loggingOut}>
                       🚪 {loggingOut ? 'Signing out…' : 'Sign Out'}
                     </button>
                   </>
@@ -337,6 +338,73 @@ export default function Navbar() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+      {/* ── Sign-out confirmation modal ── */}
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setShowLogoutConfirm(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              background: 'rgba(0,0,0,0.75)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                borderRadius: 16,
+                padding: '28px 28px 24px',
+                width: '100%', maxWidth: 360,
+                boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 36, marginBottom: 10 }}>🚪</div>
+              <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--text-1)', marginBottom: 8 }}>
+                Sign out?
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 24, lineHeight: 1.5 }}>
+                You'll need to sign back in to access your dashboard, chats, and wishlist.
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 10,
+                    border: '1px solid var(--border)', background: 'none',
+                    color: 'var(--text-2)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowLogoutConfirm(false); logout() }}
+                  disabled={loggingOut}
+                  style={{
+                    flex: 1, padding: '10px 0', borderRadius: 10,
+                    border: 'none', background: 'var(--danger, #ef4444)',
+                    color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    opacity: loggingOut ? 0.7 : 1,
+                  }}
+                >
+                  {loggingOut ? 'Signing out…' : 'Yes, sign out'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </>
