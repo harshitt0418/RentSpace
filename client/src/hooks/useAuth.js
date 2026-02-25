@@ -18,18 +18,35 @@ import useAuthStore from '@/store/authStore'
 export const useRestoreAuth = () => {
   const user = useAuthStore((s) => s.user)
   const accessToken = useAuthStore((s) => s.accessToken)
-  const { setAuth } = useAuthStore()
+  const { setAuth, setRestoring } = useAuthStore()
 
   const query = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.getMe,
-    // Fetch whenever a user is persisted — refreshes token if needed AND syncs profile data
-    enabled: !!user,
+    // Only attempt restore if user is persisted but token is missing (page refresh)
+    enabled: !!user && !accessToken,
     retry: false,
-    staleTime: 30_000, // re-fetch at most every 30s to keep avatar, name, etc. current
+    staleTime: 30_000,
   })
 
-  // React Query v5 removed onSuccess/onError from useQuery — use useEffect instead
+  // Mark restore complete once query settles (success or error)
+  useEffect(() => {
+    // If no user in localStorage, no restore needed — clear the flag immediately
+    if (!user) {
+      setRestoring(false)
+      return
+    }
+    // If token already in memory (e.g. freshly logged in), no restore needed
+    if (accessToken) {
+      setRestoring(false)
+      return
+    }
+    // Otherwise wait for the query to settle
+    if (query.isSuccess || query.isError) {
+      setRestoring(false)
+    }
+  }, [user, accessToken, query.isSuccess, query.isError]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (query.data) {
       // By now the interceptor has already set the new access token in the store
@@ -45,6 +62,7 @@ export const useRestoreAuth = () => {
 
   return query
 }
+
 
 /* ── Register ──────────────────────────────────────────────────────────── */
 // Registration either sends OTP (→ /verify-otp) or auto-verifies (→ /dashboard)

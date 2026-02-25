@@ -10,9 +10,10 @@ import { registerTokenHandlers } from '@/api/axios'
 const useAuthStore = create(
   persist(
     (set, get) => ({
-      user:        null,
+      user: null,
       accessToken: null,
-      isLoading:   false,
+      isLoading: false,
+      isRestoring: true,   // true until useRestoreAuth finishes its first check
 
       /* ── Setters ───────────────────────────────────────────────────── */
       setUser: (user) => set({ user }),
@@ -23,13 +24,15 @@ const useAuthStore = create(
 
       setLoading: (isLoading) => set({ isLoading }),
 
+      setRestoring: (isRestoring) => set({ isRestoring }),
+
       clearAuth: () => set({ user: null, accessToken: null }),
 
       /* ── Derived ───────────────────────────────────────────────────── */
       isAuthenticated: () => !!get().user && !!get().accessToken,
     }),
     {
-      name:    'rentspace-auth',
+      name: 'rentspace-auth',
       // Only persist user object, NOT the access token (security)
       partialize: (state) => ({ user: state.user }),
     }
@@ -44,3 +47,4 @@ registerTokenHandlers(
 )
 
 export default useAuthStore
+
