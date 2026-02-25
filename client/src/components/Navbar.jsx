@@ -351,7 +351,9 @@ export default function Navbar() {
             onClick={() => setShowLogoutConfirm(false)}
             style={{
               position: 'fixed', inset: 0, zIndex: 9999,
-              background: 'rgba(0,0,0,0.75)',
+              background: 'rgba(0,0,0,0.88)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 16,
             }}
@@ -363,12 +365,12 @@ export default function Navbar() {
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
               style={{
-                background: 'var(--card)',
+                background: '#0f0f1a',
                 border: '1px solid var(--border)',
                 borderRadius: 16,
                 padding: '28px 28px 24px',
                 width: '100%', maxWidth: 360,
-                boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
                 textAlign: 'center',
               }}
             >
