@@ -12,29 +12,29 @@
 
 require('dotenv').config()
 
-const express      = require('express')
-const http         = require('http')
-const cors         = require('cors')
-const helmet       = require('helmet')
-const morgan       = require('morgan')
+const express = require('express')
+const http = require('http')
+const cors = require('cors')
+const helmet = require('helmet')
+const morgan = require('morgan')
 const cookieParser = require('cookie-parser')
 
-const connectDB       = require('./config/db')
-const { initSocket }  = require('./config/socket')
-const errorHandler    = require('./middleware/errorHandler')
+const connectDB = require('./config/db')
+const { initSocket } = require('./config/socket')
+const errorHandler = require('./middleware/errorHandler')
 const { globalLimiter } = require('./middleware/rateLimiter')
 require('./config/passport')   // register Google OAuth strategy
 const passport = require('passport')
 
 // ── Route modules ─────────────────────────────────────────────────────────────
-const Item               = require('./models/Item')
-const User               = require('./models/User')
-const authRoutes         = require('./routes/authRoutes')
-const userRoutes         = require('./routes/userRoutes')
-const itemRoutes         = require('./routes/itemRoutes')
-const requestRoutes      = require('./routes/requestRoutes')
-const reviewRoutes       = require('./routes/reviewRoutes')
-const chatRoutes         = require('./routes/chatRoutes')
+const Item = require('./models/Item')
+const User = require('./models/User')
+const authRoutes = require('./routes/authRoutes')
+const userRoutes = require('./routes/userRoutes')
+const itemRoutes = require('./routes/itemRoutes')
+const requestRoutes = require('./routes/requestRoutes')
+const reviewRoutes = require('./routes/reviewRoutes')
+const chatRoutes = require('./routes/chatRoutes')
 const notificationRoutes = require('./routes/notificationRoutes')
 
 // ── Connect MongoDB ────────────────────────────────────────────────────────────
@@ -42,6 +42,9 @@ connectDB()
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
+
+// ── Trust proxy (required on Render / any reverse-proxy host) ─────────────────
+app.set('trust proxy', 1)
 
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet())
@@ -77,18 +80,18 @@ app.use('/api', globalLimiter)
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    env:    process.env.NODE_ENV,
-    time:   new Date().toISOString(),
+    env: process.env.NODE_ENV,
+    time: new Date().toISOString(),
   })
 })
 
 // ── API routes ────────────────────────────────────────────────────────────────
-app.use('/api/auth',          authRoutes)
-app.use('/api/users',         userRoutes)
-app.use('/api/items',         itemRoutes)
-app.use('/api/requests',      requestRoutes)
-app.use('/api/reviews',       reviewRoutes)
-app.use('/api/chat',          chatRoutes)
+app.use('/api/auth', authRoutes)
+app.use('/api/users', userRoutes)
+app.use('/api/items', itemRoutes)
+app.use('/api/requests', requestRoutes)
+app.use('/api/reviews', reviewRoutes)
+app.use('/api/chat', chatRoutes)
 app.use('/api/notifications', notificationRoutes)
 
 // ── Public platform stats ────────────────────────────────────────────────────
