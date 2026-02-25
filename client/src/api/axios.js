@@ -30,7 +30,7 @@ api.interceptors.request.use((config) => {
 
 /* ── Response interceptor: handle 401 / token refresh ────────────────── */
 let isRefreshing = false
-let failedQueue  = []
+let failedQueue = []
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach((prom) => (error ? prom.reject(error) : prom.resolve(token)))
@@ -70,7 +70,8 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null)
         clearAuth()
-        window.location.href = '/login'
+        // Don't hard-redirect here — ProtectedRoute handles redirect for protected
+        // pages; public pages should remain accessible even if refresh fails.
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
@@ -84,17 +85,17 @@ api.interceptors.response.use(
 /* ── Helpers — avoid circular import from authStore ──────────────────── */
 // These are set by authStore.js after it initialises
 let _getAccessToken = () => null
-let _setAccessToken = () => {}
-let _clearAuth      = () => {}
+let _setAccessToken = () => { }
+let _clearAuth = () => { }
 
 export const registerTokenHandlers = (getter, setter, clearer) => {
   _getAccessToken = getter
   _setAccessToken = setter
-  _clearAuth      = clearer
+  _clearAuth = clearer
 }
 
 const getAccessToken = () => _getAccessToken()
 const setAccessToken = (t) => _setAccessToken(t)
-const clearAuth      = () => _clearAuth()
+const clearAuth = () => _clearAuth()
 
 export default api
