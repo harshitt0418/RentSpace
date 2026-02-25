@@ -32,12 +32,21 @@ const initSocket = (server) => {
   io = new Server(server, {
     cors: {
       origin: (origin, callback) => {
-        if (!origin || /^http:\/\/localhost:\d+$/.test(origin)) callback(null, true)
-        else callback(new Error('Not allowed'))
+        // Allow: no origin (curl/Postman), any localhost port in dev,
+        // and the configured CLIENT_URL (Vercel domain) in production
+        if (
+          !origin ||
+          /^http:\/\/localhost:\d+$/.test(origin) ||
+          origin === process.env.CLIENT_URL
+        ) {
+          callback(null, true)
+        } else {
+          callback(new Error('Not allowed by Socket.io CORS'))
+        }
       },
       credentials: true,
     },
-    pingTimeout:  60000,
+    pingTimeout: 60000,
     pingInterval: 25000,
   })
 

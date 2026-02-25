@@ -8,8 +8,14 @@
  */
 import axios from 'axios'
 
+// In production (Vercel) the Vite dev-proxy doesn't exist, so we need the
+// full Render URL. Set VITE_API_URL=https://your-app.onrender.com in Vercel.
+const BASE_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   withCredentials: true, // send httpOnly refresh-token cookie automatically
   headers: { 'Content-Type': 'application/json' },
 })
@@ -56,7 +62,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const { data } = await axios.post('/api/auth/refresh', {}, { withCredentials: true })
+        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true })
         setAccessToken(data.accessToken)
         processQueue(null, data.accessToken)
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
