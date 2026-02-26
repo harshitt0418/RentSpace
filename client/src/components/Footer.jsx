@@ -47,7 +47,6 @@ export default function Footer() {
       </footer>
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} RentSpace. All rights reserved.</span>
-        <span>Built with 🤍 for communities</span>
       </div>
     </>
   )
