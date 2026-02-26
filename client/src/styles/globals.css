@@ -9,23 +9,36 @@
 /* ── Design Tokens — Dark (default) ───────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --bg: #0A0F1E;
-  --bg-2: #111827;
-  --surface: #161D2E;
-  --surface-2: #1C2540;
-  --elevated: #222C45;
-  --border: rgba(255, 255, 255, 0.07);
-  --border-accent: rgba(99, 102, 241, 0.35);
-  --accent: #6366F1;
-  --accent-2: #8B5CF6;
-  --accent-3: #06B6D4;
-  --gradient: linear-gradient(135deg, #6366F1, #8B5CF6);
-  --gradient-3: linear-gradient(135deg, #6366F1, #06B6D4);
-  --glow: 0 0 30px rgba(99, 102, 241, 0.4), 0 0 60px rgba(99, 102, 241, 0.15);
-  --glow-sm: 0 0 16px rgba(99, 102, 241, 0.35);
-  --text: #F0F4FF;
-  --text-2: #8B96B4;
-  --text-3: #4A5680;
+  --bg: #1A1A1B;
+  /* Nero - Cool-toned black */
+  --bg-2: #222223;
+  /* Slightly lighter Nero */
+  --surface: #2A2A2C;
+  /* Slate/Nero - Card backgrounds */
+  --surface-2: #333336;
+  /* Lighter surface */
+  --elevated: #404044;
+  /* Elevated surface */
+  --border: rgba(227, 218, 201, 0.15);
+  /* Sand border at low opacity */
+  --border-accent: rgba(226, 114, 91, 0.35);
+  /* Terracotta Accent */
+  --accent: #E2725B;
+  /* Primary: Terracotta */
+  --accent-2: #B87333;
+  /* Accent: Copper */
+  --accent-3: #D0634D;
+  /* Adjusted Terracotta */
+  --gradient: linear-gradient(135deg, #E2725B, #B87333);
+  --gradient-3: linear-gradient(135deg, #E2725B, #D0634D);
+  --glow: 0 0 30px rgba(226, 114, 91, 0.4), 0 0 60px rgba(226, 114, 91, 0.15);
+  --glow-sm: 0 0 16px rgba(226, 114, 91, 0.35);
+  --text: #E3DAC9;
+  /* Secondary (Sand) - Body text */
+  --text-2: rgba(227, 218, 201, 0.8);
+  /* Muted Sand */
+  --text-3: rgba(227, 218, 201, 0.5);
+  /* Highly Muted Sand */
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
@@ -34,14 +47,14 @@
   --r-sm: 8px;
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
-  --shadow-dropdown: 0 16px 48px rgba(0, 0, 0, 0.5);
-  --overlay-bg: rgba(10, 15, 30, 0.7);
-  --navbar-scrolled: rgba(10, 15, 30, 0.85);
-  --item-like-bg: rgba(10, 15, 30, 0.7);
-  --img-overlay: linear-gradient(to top, rgba(10, 15, 30, 0.5), transparent);
-  --scrollbar-track: #0A0F1E;
-  --scrollbar-thumb: #222C45;
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-dropdown: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --overlay-bg: rgba(9, 9, 11, 0.75);
+  --navbar-scrolled: rgba(9, 9, 11, 0.85);
+  --item-like-bg: rgba(24, 24, 27, 0.7);
+  --img-overlay: linear-gradient(to top, rgba(9, 9, 11, 0.6), transparent);
+  --scrollbar-track: #09090B;
+  --scrollbar-thumb: #27272A;
   --hero-glow-1: rgba(99, 102, 241, 0.12);
   --hero-glow-2: rgba(6, 182, 212, 0.07);
   --hero-glow-3: rgba(139, 92, 246, 0.08);

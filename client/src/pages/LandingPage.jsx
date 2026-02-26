@@ -10,29 +10,6 @@ import useAuthStore from '@/store/authStore'
 import { getStats } from '@/api/itemApi'
 import { Search, Calendar, CheckCircle, Star, Heart, MapPin, Tag, Camera, Monitor, Wrench, Tent, Music, Car, Building2, Bike, Package } from 'lucide-react'
 
-const HERO_CARDS = [
-  {
-    img: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=440&h=260&fit=crop&auto=format',
-    title: 'Sony A7 III Camera',
-    price: 45,
-    rating: 4.9,
-    category: 'Photography',
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=400&h=240&fit=crop&auto=format',
-    title: 'DJI Mini 3 Pro',
-    price: 38,
-    rating: 4.8,
-    category: 'Electronics',
-  },
-  {
-    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=420&h=250&fit=crop&auto=format',
-    title: 'DeWalt Power Drill Set',
-    price: 18,
-    rating: 5.0,
-    category: 'Tools',
-  },
-]
 
 const STEPS = [
   { num: '01', Icon: Search, title: 'Find what you need', body: 'Search thousands of items listed by verified owners near you. Filter by category, price, location, and availability.' },
@@ -111,18 +88,28 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="hero-cards">
-            {HERO_CARDS.map((c, i) => (
-              <div key={i} className={`hero-card hero-card-${i + 1} float-${i + 1}`}>
+            {items.slice(0, 3).map((item, i) => (
+              <div
+                key={item._id}
+                className={`hero-card hero-card-${i + 1} float-${i + 1}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/item/${item._id}`)}
+              >
                 <div className="hero-card-img">
-                  <img src={c.img} alt={c.title} className="hero-card-photo" />
+                  <img src={item.images[0] || 'https://via.placeholder.com/400x300'} alt={item.title} className="hero-card-photo" />
                   <div className="hero-card-img-overlay" />
-                  <div className="hero-card-cat-badge">{c.category}</div>
+                  <div className="hero-card-cat-badge">{item.category}</div>
                 </div>
                 <div className="hero-card-body">
-                  <div className="hero-card-title">{c.title}</div>
+                  <div className="hero-card-title cursor-pointer hover:text-accent transition-colors truncate" title={item.title}>
+                    {item.title}
+                  </div>
                   <div className="hero-card-footer">
-                    <div className="hero-card-price">₹{c.price}/day</div>
-                    <div className="hero-card-rating"><Star size={12} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {c.rating}</div>
+                    <div className="hero-card-price">₹{item.pricePerDay}/day</div>
+                    <div className="hero-card-rating">
+                      <Star size={12} fill="#B87333" color="#B87333" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} />
+                      {item.owner?.rating?.toFixed(1) || 'New'}
+                    </div>
                   </div>
                 </div>
               </div>
