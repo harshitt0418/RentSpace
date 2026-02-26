@@ -3,7 +3,7 @@
  * Uses browser Geolocation API + OpenStreetMap Nominatim (free, no API key)
  * and Leaflet for the interactive map.
  */
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -12,8 +12,8 @@ import 'leaflet/dist/leaflet.css'
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
 /* ── Reverse geocode via OpenStreetMap Nominatim ───────────────────── */
@@ -59,7 +59,6 @@ export default function LocationPicker({ value, onChange, error }) {
   const [detecting, setDetecting] = useState(false)
   const [coords, setCoords] = useState(null) // { lat, lng }
   const [mapCenter, setMapCenter] = useState([20.5937, 78.9629]) // default: India center
-  const inputRef = useRef(null)
 
   // Detect current location
   const detectLocation = useCallback(async () => {
@@ -82,6 +81,7 @@ export default function LocationPicker({ value, onChange, error }) {
         console.error('Geolocation error:', err.message)
         alert('Could not detect location. Please allow location access or pick on the map.')
         setDetecting(false)
+        setShowMap(true) // open map as fallback
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
@@ -96,19 +96,24 @@ export default function LocationPicker({ value, onChange, error }) {
 
   return (
     <div>
-      {/* Location input + detect button */}
+      {/* Location display + action buttons */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-        <input
-          ref={inputRef}
+        <div
           className="form-input"
-          value={value}
-          onChange={(e) => onChange(e.target.value, '', null)}
-          placeholder="City or neighbourhood"
           style={{
             flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            color: value ? 'var(--text)' : 'var(--text-3)',
+            cursor: 'default',
+            minHeight: 42,
             ...(error ? { borderColor: 'var(--danger)' } : {}),
           }}
-        />
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {value || 'Select location from map or detect'}
+          </span>
+        </div>
         <button
           type="button"
           onClick={detectLocation}

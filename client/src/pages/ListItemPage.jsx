@@ -68,7 +68,7 @@ export default function ListItemPage() {
     if (!form.title.trim()) e.title = 'Title is required'
     if (!form.category) e.category = 'Please select a category'
     if (!form.description.trim()) e.description = 'Description is required'
-    if (!form.location.trim()) e.location = 'Location is required'
+    if (!form.coordinates) e.location = 'Please detect your location or pick a point on the map'
     setErrors(e)
     return Object.keys(e).length === 0
   }
