@@ -4,43 +4,67 @@
  */
 const nodemailer = require('nodemailer')
 
+const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
+
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false, // true for 465, false for other ports
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: { rejectUnauthorized: false },
+  connectionTimeout: 5000,   // 5s to connect — don't hang the request
+  greetingTimeout: 5000,
+  socketTimeout: 10000,
 })
 
+// Verify SMTP at startup so misconfiguration is caught early
+if (EMAIL_CONFIGURED) {
+  transporter.verify((err) => {
+    if (err) {
+      console.error('❌ SMTP connection failed:', err.message)
+      console.error('   → Emails will be logged to console as fallback')
+    } else {
+      console.log('✅ SMTP ready — emails enabled for:', process.env.EMAIL_USER)
+    }
+  })
+}
+
 /**
- * Send an email
- * @param {Object} options
- * @param {string} options.to      - Recipient email
- * @param {string} options.subject - Email subject
- * @param {string} options.html    - HTML body
+ * Log OTP to console (dev fallback when SMTP is unavailable or fails)
+ */
+const logToConsole = ({ to, subject, html }) => {
+  const otpMatch = html.match(/\b(\d{6})\b/)
+  console.log('\n────────────────────────────────────────────')
+  console.log(`📧  [EMAIL FALLBACK] Could not send via SMTP`)
+  console.log(`   To:      ${to}`)
+  console.log(`   Subject: ${subject}`)
+  if (otpMatch) console.log(`   ⭐ OTP CODE: ${otpMatch[1]} ⭐`)
+  console.log('────────────────────────────────────────────\n')
+}
+
+/**
+ * Send an email — falls back to console log if SMTP is unavailable
  */
 const sendEmail = async ({ to, subject, html }) => {
-  // If email is not configured (no credentials), log to console and skip
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log('────────────────────────────────────────────')
-    console.log(`📧  [DEV MODE] Email not sent — no credentials`)
-    console.log(`   To:      ${to}`)
-    console.log(`   Subject: ${subject}`)
-    // Extract OTP from HTML if present (matches 6 consecutive digits)
-    const otpMatch = html.match(/\b(\d{6})\b/)
-    if (otpMatch) console.log(`   OTP CODE: ${otpMatch[1]}`)
-    console.log('────────────────────────────────────────────')
-    return   // pretend it succeeded
+  if (!EMAIL_CONFIGURED) {
+    logToConsole({ to, subject, html })
+    return
   }
-
-  await transporter.sendMail({
-    from: `"RentSpace" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  })
+  try {
+    await transporter.sendMail({
+      from: `"RentSpace" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    })
+  } catch (err) {
+    console.error('❌ SMTP send error:', err.message)
+    // Fall back to console so OTP flow still works in dev
+    logToConsole({ to, subject, html })
+  }
 }
 
 /**

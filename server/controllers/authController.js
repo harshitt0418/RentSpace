@@ -202,7 +202,8 @@ exports.forgotPassword = async (req, res, next) => {
     try {
       await sendPasswordResetEmail(email, otp)
     } catch (emailErr) {
-      console.log('⚠️  Email send failed:', emailErr.message)
+      console.error('❌ [forgotPassword] Email send failed:', emailErr.message)
+      console.error('   Stack:', emailErr.stack)
       return next(new ApiError('Failed to send reset email. Please try again.', 500))
     }
 
