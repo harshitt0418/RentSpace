@@ -48,9 +48,9 @@ async function autoSetLocation() {
 }
 
 export default function AuthCallbackPage() {
-  const [params]  = useSearchParams()
-  const navigate  = useNavigate()
-  const setAuth   = useAuthStore((s) => s.setAuth)
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
 
   useEffect(() => {
     // React 18 StrictMode runs effects twice — this flag prevents double execution

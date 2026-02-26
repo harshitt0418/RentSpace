@@ -36,9 +36,34 @@ const requestRoutes = require('./routes/requestRoutes')
 const reviewRoutes = require('./routes/reviewRoutes')
 const chatRoutes = require('./routes/chatRoutes')
 const notificationRoutes = require('./routes/notificationRoutes')
+const adminRoutes = require('./routes/adminRoutes')
 
 // ── Connect MongoDB ────────────────────────────────────────────────────────────
 connectDB()
+
+// ── Seed admin account ────────────────────────────────────────────────────────
+const ADMIN_EMAIL = 'admin@rentspace.app'
+const ADMIN_PASSWORD = 'Admin@2026'
+
+async function seedAdmin() {
+  try {
+    const exists = await User.findOne({ email: ADMIN_EMAIL })
+    if (!exists) {
+      await User.create({
+        name: 'Admin',
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+        role: 'admin',
+        isVerified: true,
+        location: 'System',
+      })
+      console.log('✅ Admin account seeded: admin@rentspace.app')
+    }
+  } catch (err) {
+    console.error('⚠️  Admin seed error:', err.message)
+  }
+}
+seedAdmin()
 
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
@@ -93,6 +118,7 @@ app.use('/api/requests', requestRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/admin', adminRoutes)
 
 // ── Public platform stats ────────────────────────────────────────────────────
 app.get('/api/stats', async (req, res) => {

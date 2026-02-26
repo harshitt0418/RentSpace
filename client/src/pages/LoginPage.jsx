@@ -11,9 +11,20 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
   const { mutate: login, isPending: loading } = useLogin()
 
   const set = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }))
+
+  const toggleAdmin = () => {
+    if (!isAdmin) {
+      setForm({ email: 'admin@rentspace.app', password: '' })
+    } else {
+      setForm({ email: '', password: '' })
+    }
+    setIsAdmin(!isAdmin)
+    setError('')
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -31,41 +42,56 @@ export default function LoginPage() {
         <div className="auth-orb auth-orb-3" />
 
         <div className="auth-panel-left-content">
-          <div className="auth-panel-eyebrow">✦ Trusted by 10,000+ renters</div>
+          <div className="auth-panel-eyebrow">{isAdmin ? '🛡️ Administrator Access' : '✦ Trusted by 10,000+ renters'}</div>
           <h1 className="auth-panel-headline">
-            Welcome<br /><span>back.</span>
+            {isAdmin ? (<>Admin<br /><span>panel.</span></>) : (<>Welcome<br /><span>back.</span></>)}
           </h1>
           <p className="auth-panel-sub">
-            Your community is waiting. Pick up right where you left off.
+            {isAdmin
+              ? 'Sign in with admin credentials to access the management dashboard.'
+              : 'Your community is waiting. Pick up right where you left off.'
+            }
           </p>
 
-          <div className="auth-stats">
-            <div className="auth-stat">
-              <div className="auth-stat-num">2,400+</div>
-              <div className="auth-stat-label">Items</div>
-            </div>
-            <div className="auth-stat">
-              <div className="auth-stat-num">4.9 ★</div>
-              <div className="auth-stat-label">Rating</div>
-            </div>
-            <div className="auth-stat">
-              <div className="auth-stat-num">50+</div>
-              <div className="auth-stat-label">Cities</div>
-            </div>
-          </div>
-
-          <div className="auth-testimonial">
-            <div className="auth-testimonial-text">
-              "RentSpace saved me ₹15,000 last month — rented a DSLR for a shoot instead of buying one. Absolute game changer!"
-            </div>
-            <div className="auth-testimonial-author">
-              <div className="auth-testimonial-avatar">P</div>
-              <div>
-                <div className="auth-testimonial-name">Priya Sharma</div>
-                <div className="auth-testimonial-role">Photographer · Delhi</div>
+          {!isAdmin && (
+            <>
+              <div className="auth-stats">
+                <div className="auth-stat">
+                  <div className="auth-stat-num">2,400+</div>
+                  <div className="auth-stat-label">Items</div>
+                </div>
+                <div className="auth-stat">
+                  <div className="auth-stat-num">4.9 ★</div>
+                  <div className="auth-stat-label">Rating</div>
+                </div>
+                <div className="auth-stat">
+                  <div className="auth-stat-num">50+</div>
+                  <div className="auth-stat-label">Cities</div>
+                </div>
               </div>
+
+              <div className="auth-testimonial">
+                <div className="auth-testimonial-text">
+                  "RentSpace saved me ₹15,000 last month — rented a DSLR for a shoot instead of buying one. Absolute game changer!"
+                </div>
+                <div className="auth-testimonial-author">
+                  <div className="auth-testimonial-avatar">P</div>
+                  <div>
+                    <div className="auth-testimonial-name">Priya Sharma</div>
+                    <div className="auth-testimonial-role">Photographer · Delhi</div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {isAdmin && (
+            <div className="auth-features">
+              <div className="auth-feature"><div className="auth-feature-check">✓</div>View all users, items &amp; reviews</div>
+              <div className="auth-feature"><div className="auth-feature-check">✓</div>Delete or moderate any content</div>
+              <div className="auth-feature"><div className="auth-feature-check">✓</div>Platform analytics dashboard</div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -73,23 +99,42 @@ export default function LoginPage() {
       <div className="auth-panel-right">
         <div className="auth-card">
           <div className="auth-card-logo">RentSpace</div>
-          <h1 className="auth-title">Sign in to your account</h1>
+
+          {isAdmin && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 8, padding: '6px 12px', marginBottom: 16,
+              fontSize: 12, fontWeight: 700, color: '#ef4444',
+            }}>
+              🛡️ Admin Mode
+            </div>
+          )}
+
+          <h1 className="auth-title">{isAdmin ? 'Admin sign in' : 'Sign in to your account'}</h1>
           <p className="auth-sub">
-            Don't have one?{' '}
-            <Link to="/signup" className="auth-link">Create account →</Link>
+            {isAdmin ? (
+              <span>Use the fixed admin credentials.</span>
+            ) : (
+              <>Don't have one?{' '}<Link to="/signup" className="auth-link">Create account →</Link></>
+            )}
           </p>
 
-          {/* Google OAuth — primary CTA */}
-          <a href={GOOGLE_AUTH_URL} className="auth-google-btn">
-            <GoogleIcon />
-            Continue with Google
-          </a>
+          {/* Google OAuth — only for regular users */}
+          {!isAdmin && (
+            <>
+              <a href={GOOGLE_AUTH_URL} className="auth-google-btn">
+                <GoogleIcon />
+                Continue with Google
+              </a>
 
-          <div className="auth-divider">
-            <div className="auth-divider-line" />
-            <div className="auth-divider-text">or sign in with email</div>
-            <div className="auth-divider-line" />
-          </div>
+              <div className="auth-divider">
+                <div className="auth-divider-line" />
+                <div className="auth-divider-text">or sign in with email</div>
+                <div className="auth-divider-line" />
+              </div>
+            </>
+          )}
 
           {error && <div className="auth-error">{error}</div>}
 
@@ -100,6 +145,8 @@ export default function LoginPage() {
                 className="form-input" type="email" name="email"
                 value={form.email} onChange={set}
                 placeholder="you@example.com" autoComplete="email"
+                readOnly={isAdmin}
+                style={isAdmin ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
               />
             </div>
             <div className="form-group">
@@ -120,11 +167,14 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20, marginTop: -8 }}>
-              <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>Forgot password?</Link>
-            </div>
+            {!isAdmin && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20, marginTop: -8 }}>
+                <Link to="/forgot-password" className="auth-link" style={{ fontSize: 13 }}>Forgot password?</Link>
+              </div>
+            )}
+            {isAdmin && <div style={{ height: 12 }} />}
             <button className="auth-submit" type="submit" disabled={loading}>
-              {loading ? 'Signing in…' : 'Sign In →'}
+              {loading ? 'Signing in…' : (isAdmin ? '🛡️ Sign in as Admin' : 'Sign In →')}
             </button>
           </form>
 
@@ -133,6 +183,22 @@ export default function LoginPage() {
             <Link to="/terms" className="auth-link" style={{ fontSize: 12 }}>Terms</Link>{' '}&amp;{' '}
             <Link to="/privacy" className="auth-link" style={{ fontSize: 12 }}>Privacy Policy</Link>
           </p>
+
+          {/* Admin toggle */}
+          <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              onClick={toggleAdmin}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: isAdmin ? 'var(--accent)' : 'var(--text-3)',
+                fontSize: 13, fontWeight: 500,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {isAdmin ? '← Back to regular login' : '🛡️ Login as Admin'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -8,13 +8,13 @@ import { useResetPassword } from '@/hooks/useAuth'
 export default function ResetPasswordPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const email    = location.state?.email
+  const email = location.state?.email
 
-  const [otp, setOtp]         = useState(['', '', '', '', '', ''])
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [password, setPassword] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
-  const [showPw, setShowPw]   = useState(false)
-  const [error, setError]     = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [error, setError] = useState('')
   const inputRefs = useRef([])
 
   const { mutate: resetPw, isPending: loading } = useResetPassword()
@@ -99,7 +99,7 @@ export default function ResetPasswordPage() {
           {error && <div className="auth-error">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            {/* OTP */ }
+            {/* OTP */}
             <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>Verification code</label>
             <div className="otp-row" style={{ margin: '0 0 20px' }}>
               {otp.map((digit, i) => (

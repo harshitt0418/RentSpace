@@ -8,10 +8,10 @@ import { useVerifyOTP, useResendOTP } from '@/hooks/useAuth'
 export default function VerifyOTPPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const email    = location.state?.email
+  const email = location.state?.email
 
-  const [otp, setOtp]         = useState(['', '', '', '', '', ''])
-  const [error, setError]     = useState('')
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(60)
   const inputRefs = useRef([])
 

@@ -40,6 +40,11 @@ exports.register = async (req, res, next) => {
   try {
     const { name, email, password, location } = req.body
 
+    // Block registration with the reserved admin email
+    if (email.toLowerCase() === 'admin@rentspace.app') {
+      return next(new ApiError('This email is reserved. Please use a different email.', 400))
+    }
+
     const existing = await User.findOne({ email }).select('+otp +otpExpiry')
     if (existing && existing.isVerified) {
       return next(new ApiError('Email already in use', 400))

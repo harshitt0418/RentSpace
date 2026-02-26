@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LayoutDashboard, LogOut, User, Sun, Moon, Menu, X, Bell, Check, Heart, MessageCircle, Plus, Search, Trash2 } from 'lucide-react'
+import { LayoutDashboard, LogOut, User, Sun, Moon, Menu, X, Bell, Check, Heart, MessageCircle, Plus, Search, Trash2, Shield } from 'lucide-react'
 
 import useAuthStore from '@/store/authStore'
 import useThemeStore from '@/store/themeStore'
@@ -251,6 +251,7 @@ export default function Navbar() {
                       </div>
                       <div className="divider" style={{ margin: '4px 0' }} />
                       <DropItem icon={<LayoutDashboard size={15} />} label="Dashboard" onClick={() => { setUserMenuOpen(false); go('/dashboard') }} />
+                      {user?.role === 'admin' && <DropItem icon={<Shield size={15} />} label="Admin Panel" onClick={() => { setUserMenuOpen(false); go('/admin') }} />}
                       <DropItem icon={<MessageCircle size={15} />} label="Messages" onClick={() => { setUserMenuOpen(false); go('/chat') }} />
                       <DropItem icon={<Heart size={15} />} label="Wishlist" onClick={() => { setUserMenuOpen(false); go('/wishlist') }} />
                       <DropItem icon={<User size={15} />} label="Profile" onClick={() => { setUserMenuOpen(false); go(`/profile/${user?._id}`) }} />
@@ -316,6 +317,7 @@ export default function Navbar() {
                   <>
                     <div className="divider" />
                     <button className="mobile-nav-link" onClick={() => go('/dashboard')}>🏠 Dashboard</button>
+                    {user?.role === 'admin' && <button className="mobile-nav-link" onClick={() => go('/admin')}>🛡️ Admin Panel</button>}
                     <button className="mobile-nav-link" onClick={() => go('/wishlist')}>❤️ Wishlist</button>
                     <button className="mobile-nav-link" onClick={() => go('/list-item')}>➕ List Item</button>
                     <button className="mobile-nav-link" onClick={() => go('/chat')}>💬 Messages</button>

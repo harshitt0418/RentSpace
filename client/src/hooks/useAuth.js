@@ -156,7 +156,8 @@ export const useLogin = () => {
       setAuth(data.user, data.accessToken)
       qc.invalidateQueries({ queryKey: ['auth'] })
       toast.success(`Welcome back, ${data.user.name}!`, { id: 'auth-welcome' })
-      navigate('/dashboard')
+      // Redirect admin users to admin panel
+      navigate(data.user.role === 'admin' ? '/admin' : '/dashboard')
     },
     onError: (err) => {
       toast.error(err.response?.data?.message || 'Invalid credentials')

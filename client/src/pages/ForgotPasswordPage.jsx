@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
         navigate('/reset-password', { state: { email } })
       },
       onError: (err) => {
-        const status  = err.response?.status
+        const status = err.response?.status
         const message = err.response?.data?.message || 'Something went wrong'
         if (status === 404) {
           toast.error(message)
