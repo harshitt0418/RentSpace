@@ -6409,6 +6409,26 @@ html {
   color: #ef4444;
 }
 
+/* ── Ban button ── */
+.admin-ban-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.admin-ban-btn:hover {
+  background: rgba(245, 158, 11, .1);
+  color: #f59e0b;
+}
+
 /* ── Pagination ── */
 .admin-pagination {
   display: flex;

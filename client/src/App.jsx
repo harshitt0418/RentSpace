@@ -94,10 +94,12 @@ export default function App() {
             <Route path="chat/:roomId" element={
               <ProtectedRoute><ChatPage /></ProtectedRoute>
             } />
-            <Route path="admin" element={
-              <ProtectedRoute><AdminPanel /></ProtectedRoute>
-            } />
           </Route>
+
+          {/* ── Admin panel (standalone, no navbar/footer) ── */}
+          <Route path="admin" element={
+            <ProtectedRoute><AdminPanel /></ProtectedRoute>
+          } />
 
           {/* ── 404 ── */}
           <Route path="*" element={<NotFoundPage />} />

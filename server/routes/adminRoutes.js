@@ -8,6 +8,7 @@ const {
     getStats,
     getUsers,
     deleteUser,
+    banUser,
     getItems,
     deleteItem,
     getReviews,
@@ -22,6 +23,7 @@ router.use(protect, restrictTo('admin'))
 router.get('/stats', getStats)
 router.get('/users', getUsers)
 router.delete('/users/:id', deleteUser)
+router.patch('/users/:id/ban', banUser)
 router.get('/items', getItems)
 router.delete('/items/:id', deleteItem)
 router.get('/reviews', getReviews)

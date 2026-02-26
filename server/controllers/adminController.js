@@ -83,6 +83,25 @@ exports.deleteUser = async (req, res, next) => {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   PATCH /api/admin/users/:id/ban
+   Toggle ban status on a user.
+──────────────────────────────────────────────────────────────── */
+exports.banUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id)
+        if (!user) return next(new ApiError('User not found', 404))
+        if (user.role === 'admin') return next(new ApiError('Cannot ban admin account', 400))
+
+        user.isBanned = !user.isBanned
+        await user.save({ validateBeforeSave: false })
+
+        res.json({ success: true, message: user.isBanned ? 'User banned' : 'User unbanned', isBanned: user.isBanned })
+    } catch (err) {
+        next(err)
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
    GET /api/admin/items?page=1&limit=20&search=
    List all items (paginated).
 ──────────────────────────────────────────────────────────────── */

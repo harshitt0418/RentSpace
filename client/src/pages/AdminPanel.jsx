@@ -10,12 +10,13 @@ import {
     getAdminStats,
     getAdminUsers,
     deleteUser,
+    banUser,
     getAdminItems,
     deleteItemAdmin,
     getAdminReviews,
     deleteReviewAdmin,
 } from '@/api/adminApi'
-import { Users, Package, Star, FileText, Trash2, Search, ChevronLeft, ChevronRight, Shield } from 'lucide-react'
+import { Users, Package, Star, FileText, Trash2, Search, ChevronLeft, ChevronRight, Shield, Ban, LogOut } from 'lucide-react'
 
 const TABS = [
     { key: 'overview', label: 'Overview', Icon: Shield },
@@ -27,12 +28,18 @@ const TABS = [
 export default function AdminPanel() {
     const [tab, setTab] = useState('overview')
     const user = useAuthStore((s) => s.user)
+    const clearAuth = useAuthStore((s) => s.clearAuth)
     const navigate = useNavigate()
 
     // Guard: redirect non-admins
     if (!user || user.role !== 'admin') {
         navigate('/dashboard')
         return null
+    }
+
+    const handleLogout = () => {
+        clearAuth()
+        navigate('/login')
     }
 
     return (
@@ -52,6 +59,11 @@ export default function AdminPanel() {
                         <span>{t.label}</span>
                     </button>
                 ))}
+                <div style={{ flex: 1 }} />
+                <button className="admin-tab" onClick={handleLogout} style={{ color: 'var(--danger)' }}>
+                    <LogOut size={16} />
+                    <span>Sign Out</span>
+                </button>
             </div>
 
             <div className="admin-main">
@@ -116,6 +128,12 @@ function UsersTab() {
         onError: (err) => toast.error(err.response?.data?.message || 'Delete failed'),
     })
 
+    const ban = useMutation({
+        mutationFn: banUser,
+        onSuccess: (data) => { toast.success(data.message); qc.invalidateQueries({ queryKey: ['admin'] }) },
+        onError: (err) => toast.error(err.response?.data?.message || 'Ban failed'),
+    })
+
     return (
         <div>
             <h1 className="admin-page-title">Users</h1>
@@ -128,7 +146,7 @@ function UsersTab() {
             <div className="admin-table-wrap">
                 <table className="admin-table">
                     <thead>
-                        <tr><th>Name</th><th>Email</th><th>Role</th><th>Verified</th><th>Joined</th><th></th></tr>
+                        <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr>
                     </thead>
                     <tbody>
                         {isLoading ? (
@@ -145,13 +163,28 @@ function UsersTab() {
                                 </td>
                                 <td><span style={{ color: 'var(--text-2)' }}>{u.email}</span></td>
                                 <td><span className={`admin-badge ${u.role === 'admin' ? 'admin-badge-admin' : ''}`}>{u.role}</span></td>
-                                <td><span style={{ color: u.isVerified ? 'var(--success)' : 'var(--danger)' }}>{u.isVerified ? '✓' : '✗'}</span></td>
+                                <td>
+                                    {u.isBanned
+                                        ? <span className="admin-badge" style={{ background: 'rgba(239,68,68,.12)', color: '#ef4444' }}>Banned</span>
+                                        : <span className="admin-badge admin-badge-green">Active</span>
+                                    }
+                                </td>
                                 <td><span style={{ color: 'var(--text-3)', fontSize: 13 }}>{new Date(u.createdAt).toLocaleDateString()}</span></td>
                                 <td>
                                     {u.role !== 'admin' && (
-                                        <button className="admin-delete-btn" onClick={() => { if (confirm(`Delete user "${u.name}"? This will also remove all their items, reviews, and requests.`)) del.mutate(u._id) }}>
-                                            <Trash2 size={14} />
-                                        </button>
+                                        <div style={{ display: 'flex', gap: 4 }}>
+                                            <button
+                                                className="admin-ban-btn"
+                                                title={u.isBanned ? 'Unban user' : 'Ban user'}
+                                                onClick={() => ban.mutate(u._id)}
+                                                style={u.isBanned ? { background: 'rgba(16,185,129,.1)', color: '#10b981' } : {}}
+                                            >
+                                                <Ban size={14} />
+                                            </button>
+                                            <button className="admin-delete-btn" onClick={() => { if (confirm(`Delete user "${u.name}"? This will also remove all their items, reviews, and requests.`)) del.mutate(u._id) }}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                     )}
                                 </td>
                             </tr>
