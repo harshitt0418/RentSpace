@@ -93,7 +93,7 @@ export default function LandingPage() {
                 key={item._id}
                 className={`hero-card hero-card-${i + 1} float-${i + 1}`}
                 style={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/item/${item._id}`)}
+                onClick={() => navigate(`/items/${item._id}`)}
               >
                 <div className="hero-card-img">
                   <img src={item.images[0] || 'https://via.placeholder.com/400x300'} alt={item.title} className="hero-card-photo" />

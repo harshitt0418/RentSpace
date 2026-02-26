@@ -2402,7 +2402,8 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: rgba(99, 102, 241, 0.85);
+  background: var(--accent);
+  /* Now dynamically matches the theme's core accent color */
   color: white;
   backdrop-filter: blur(4px);
 }
