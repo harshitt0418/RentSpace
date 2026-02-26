@@ -65,6 +65,41 @@ async function seedAdmin() {
 }
 seedAdmin()
 
+// ── Migrate old coordinate format to GeoJSON ──────────────────────────────────
+async function migrateCoordinates() {
+  try {
+    // Drop the old 2dsphere index on raw coordinates if it exists
+    try {
+      await Item.collection.dropIndex('location.coordinates_2dsphere')
+      console.log('🔄 Dropped old 2dsphere index')
+    } catch { /* index doesn't exist — fine */ }
+
+    // Find items with old-format coordinates (plain [lng, lat] array instead of GeoJSON)
+    const oldItems = await Item.find({
+      'location.coordinates': { $exists: true },
+      'location.coordinates.type': { $exists: false },
+    })
+
+    if (oldItems.length > 0) {
+      for (const item of oldItems) {
+        const raw = item.location.coordinates
+        if (Array.isArray(raw) && raw.length === 2) {
+          item.location.coordinates = { type: 'Point', coordinates: raw }
+          await item.save({ validateBeforeSave: false })
+        }
+      }
+      console.log(`🔄 Migrated ${oldItems.length} items to GeoJSON coordinates`)
+    }
+
+    // Ensure the new 2dsphere index exists
+    await Item.collection.createIndex({ 'location.coordinates': '2dsphere' })
+    console.log('✅ 2dsphere index ready')
+  } catch (err) {
+    console.error('⚠️  Coordinate migration error:', err.message)
+  }
+}
+migrateCoordinates()
+
 // ── Express app ───────────────────────────────────────────────────────────────
 const app = express()
 

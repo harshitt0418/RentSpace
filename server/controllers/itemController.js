@@ -36,17 +36,17 @@ exports.getItems = async (req, res, next) => {
     if (category) filter.category = category
 
     // Geo proximity filter: lat + lng provided → find items within radius km
-    // NOTE: $nearSphere is incompatible with $text, so when geo is active we use regex for search
-    // Only items with coordinates stored are eligible; add coordinates existence check
+    // Uses GeoJSON $nearSphere with proper $geometry format for 2dsphere index
     const hasGeo = lat && lng
     if (hasGeo) {
-      // Legacy $nearSphere with coordinate pair + $maxDistance in radians.
-      // This works with plain [lng, lat] arrays (2dsphere index) and does NOT
-      // require GeoJSON Point format — compatible with all existing items.
-      // Radius in radians = km / Earth radius (6371 km)
       filter['location.coordinates'] = {
-        $nearSphere: [parseFloat(lng), parseFloat(lat)],
-        $maxDistance: parseFloat(radius) / 6371,
+        $nearSphere: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+          },
+          $maxDistance: parseFloat(radius) * 1000,   // km → metres
+        },
       }
       // Fallback text search via regex (can't combine $text + $nearSphere)
       if (q) {
@@ -120,6 +120,14 @@ exports.createItem = async (req, res, next) => {
     let parsedLocation = location
     if (typeof location === 'string') {
       try { parsedLocation = JSON.parse(location) } catch { parsedLocation = { city: location } }
+    }
+
+    // Convert raw [lng, lat] coordinates to GeoJSON Point format for 2dsphere index
+    if (parsedLocation.coordinates && Array.isArray(parsedLocation.coordinates)) {
+      parsedLocation.coordinates = {
+        type: 'Point',
+        coordinates: parsedLocation.coordinates,   // [lng, lat]
+      }
     }
 
     const item = await Item.create({

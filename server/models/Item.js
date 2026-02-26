@@ -52,12 +52,16 @@ const itemSchema = new mongoose.Schema(
       city: { type: String, required: true },
       state: { type: String },
       address: { type: String },
-      // [longitude, latitude] — plain coordinate pair with 2dsphere index
+      // GeoJSON Point — required for 2dsphere geospatial queries
       coordinates: {
-        type: [Number],
-        index: '2dsphere',
-        sparse: true,        // don't index items that have no coordinates
-        default: undefined,
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point',
+        },
+        coordinates: {
+          type: [Number],   // [longitude, latitude]
+        },
       },
     },
     tags: {
@@ -114,6 +118,9 @@ itemSchema.index({ title: 'text', description: 'text', tags: 'text' })
 
 // ── Compound index for browse filtering ──────────────────────────────────────
 itemSchema.index({ category: 1, status: 1, pricePerDay: 1 })
+
+// ── 2dsphere index for geospatial queries ────────────────────────────────────
+itemSchema.index({ 'location.coordinates': '2dsphere' })
 
 // ── Virtual: cover image (first image) ───────────────────────────────────────
 itemSchema.virtual('coverImage').get(function () {
