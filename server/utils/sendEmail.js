@@ -9,15 +9,12 @@ const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
   port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
+  secure: false,   // false = STARTTLS (correct for port 587)
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: { rejectUnauthorized: false },
-  connectionTimeout: 5000,   // 5s to connect — don't hang the request
-  greetingTimeout: 5000,
-  socketTimeout: 10000,
+  // NOTE: no tls override — Gmail needs its real certificate to be verified
 })
 
 // Verify SMTP at startup so misconfiguration is caught early
@@ -46,25 +43,28 @@ const logToConsole = ({ to, subject, html }) => {
 }
 
 /**
- * Send an email — falls back to console log if SMTP is unavailable
+ * Send an email — logs to console if email is unconfigured (dev only)
  */
 const sendEmail = async ({ to, subject, html }) => {
   if (!EMAIL_CONFIGURED) {
-    logToConsole({ to, subject, html })
+    // Dev fallback: no email credentials — print OTP to console
+    const otpMatch = html.match(/\b(\d{6})\b/)
+    console.log('\n────────────────────────────────────────────')
+    console.log(`📧  [DEV] No SMTP credentials — logging email instead`)
+    console.log(`   To:      ${to}`)
+    console.log(`   Subject: ${subject}`)
+    if (otpMatch) console.log(`   ⭐ OTP CODE: ${otpMatch[1]} ⭐`)
+    console.log('────────────────────────────────────────────\n')
     return
   }
-  try {
-    await transporter.sendMail({
-      from: `"RentSpace" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    })
-  } catch (err) {
-    console.error('❌ SMTP send error:', err.message)
-    // Fall back to console so OTP flow still works in dev
-    logToConsole({ to, subject, html })
-  }
+
+  // Credentials are set — let any SMTP error propagate so it's visible in logs
+  await transporter.sendMail({
+    from: `"RentSpace" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  })
 }
 
 /**
