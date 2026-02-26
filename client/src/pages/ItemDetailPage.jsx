@@ -27,8 +27,10 @@ const tomorrowStr = () => { const d = new Date(); d.setDate(d.getDate() + 1); re
 const THUMB_FALLBACK_ICON = Image
 
 function getCategoryIcon(cat) {
-  const map = { Photography: Camera, Cameras: Camera, Electronics: Monitor, 'Tools & DIY': Wrench, Tools: Wrench,
-    Outdoor: Tent, Sports: Bike, Music: Music, Vehicles: Car, 'Home & Garden': Building2, Spaces: Building2 }
+  const map = {
+    Photography: Camera, Cameras: Camera, Electronics: Monitor, 'Tools & DIY': Wrench, Tools: Wrench,
+    Outdoor: Tent, Sports: Bike, Music: Music, Vehicles: Car, 'Home & Garden': Building2, Spaces: Building2
+  }
   const Icon = map[cat] || Package
   return <Icon size={52} style={{ color: 'var(--text-3)' }} />
 }
@@ -36,37 +38,37 @@ function getCategoryIcon(cat) {
 export default function ItemDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const currentUser  = useAuthStore((s) => s.user)
-  const accessToken   = useAuthStore((s) => s.accessToken)
+  const currentUser = useAuthStore((s) => s.user)
+  const accessToken = useAuthStore((s) => s.accessToken)
 
   const [activeThumb, setActiveThumb] = useState(0)
   const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate]     = useState('')
+  const [endDate, setEndDate] = useState('')
   const [showEditModal, setShowEditModal] = useState(false)
-  const [dateError, setDateError]   = useState('')
+  const [dateError, setDateError] = useState('')
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [termsError, setTermsError]  = useState(false)
+  const [termsError, setTermsError] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
 
   const { data: itemData, isLoading } = useItem(id)
-  const { data: reviewsData }         = useItemReviews(id)
+  const { data: reviewsData } = useItemReviews(id)
   const { mutate: sendRequest, isPending: requesting } = useSendRequest()
-  const { mutate: createRoom }        = useCreateRoom()
-  const { data: wlData }              = useWishlistIds()
-  const { mutate: toggleWish }        = useToggleWishlist()
+  const { mutate: createRoom } = useCreateRoom()
+  const { data: wlData } = useWishlistIds()
+  const { mutate: toggleWish } = useToggleWishlist()
 
-  const item    = itemData?.data
+  const item = itemData?.data
   const reviews = reviewsData?.data || []
   const isLiked = (wlData?.ids || []).includes(item?._id)
   const isOwner = currentUser && item?.owner && currentUser._id === item.owner._id
 
   /* ── Price math ── */
   const minRentalDays = item?.minRentalDays || 1
-  const days      = startDate && endDate ? Math.max(1, Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000)) : minRentalDays
-  const subtotal  = item ? days * item.pricePerDay : 0
-  const deposit   = item?.deposit || 100
+  const days = startDate && endDate ? Math.max(1, Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000)) : minRentalDays
+  const subtotal = item ? days * item.pricePerDay : 0
+  const deposit = item?.deposit || 100
   const serviceFee = Math.round(subtotal * 0.1)
-  const total     = subtotal + deposit + serviceFee
+  const total = subtotal + deposit + serviceFee
 
   /* ── Minimum checkout date based on check-in + owner's min rental days ── */
   const minCheckoutStr = (checkIn) => {
@@ -109,33 +111,33 @@ export default function ItemDetailPage() {
 
   /* ── Loading / Not found ── */
   if (isLoading) return (
-    <div className="detail-layout" style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
-      <div style={{ color:'var(--text-2)', fontSize:16 }}>Loading item…</div>
+    <div className="detail-layout" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ color: 'var(--text-2)', fontSize: 16 }}>Loading item…</div>
     </div>
   )
   if (!item) return (
-    <div className="detail-layout" style={{ textAlign:'center', paddingTop:120 }}>
-      <div style={{ fontSize:48, marginBottom:12 }}>😕</div>
-      <div style={{ fontSize:18, fontWeight:600, marginBottom:8 }}>Item not found</div>
+    <div className="detail-layout" style={{ textAlign: 'center', paddingTop: 120 }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>😕</div>
+      <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Item not found</div>
       <button className="btn-primary" onClick={() => navigate('/browse')}>Back to Browse</button>
     </div>
   )
 
-  const emoji  = getCategoryIcon(item.category)
+  const emoji = getCategoryIcon(item.category)
   const images = item.images?.length > 0 ? item.images : []
 
   return (
     <div className="detail-layout">
 
       {/* ── Breadcrumb ── */}
-      <div className="detail-breadcrumb" style={{ paddingTop:24, paddingBottom:4 }}>
+      <div className="detail-breadcrumb" style={{ paddingTop: 24, paddingBottom: 4 }}>
         <span onClick={() => navigate('/browse')}>Browse</span>
         {' › '}{item.category || 'General'}
         {' › '}{item.title}
       </div>
 
       {/* ── Title + meta ── */}
-      <div className="detail-header" style={{ paddingTop:12, paddingBottom:20 }}>
+      <div className="detail-header" style={{ paddingTop: 12, paddingBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <h1 className="detail-title" style={{ margin: 0 }}>{item.title}</h1>
           {isOwner && (
@@ -149,8 +151,8 @@ export default function ItemDetailPage() {
           )}
         </div>
         <div className="detail-meta">
-          <span><Star size={14} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {(item.rating > 0) ? item.rating.toFixed(1) : 'New'} · {item.totalReviews || reviews.length || 0} {(item.totalReviews || reviews.length || 0) === 1 ? 'review' : 'reviews'}</span>
-          <span><MapPin size={14} style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.location?.address || [item.location?.city, item.location?.state].filter(Boolean).join(', ') || item.location || 'Unknown'}</span>
+          <span><Star size={14} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {(item.rating > 0) ? item.rating.toFixed(1) : 'New'} · {item.totalReviews || reviews.length || 0} {(item.totalReviews || reviews.length || 0) === 1 ? 'review' : 'reviews'}</span>
+          <span><MapPin size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.location?.address || [item.location?.city, item.location?.state].filter(Boolean).join(', ') || item.location || 'Unknown'}</span>
           <span className="tag">{item.category || 'General'}</span>
         </div>
       </div>
@@ -159,12 +161,12 @@ export default function ItemDetailPage() {
       <div className="detail-grid">
 
         {/* ════ LEFT ════ */}
-        <div>
+        <div className="detail-left">
           {/* Gallery */}
           <div className="detail-gallery">
             <div className="gallery-main">
               {images[activeThumb]
-                ? <img src={images[activeThumb]} alt={item.title} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                ? <img src={images[activeThumb]} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : getCategoryIcon(item.category)
               }
               {/* Wishlist heart */}
@@ -185,7 +187,7 @@ export default function ItemDetailPage() {
                   onClick={() => setActiveThumb(i)}
                 >
                   {img
-                    ? <img src={img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:8 }} />
+                    ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8 }} />
                     : <THUMB_FALLBACK_ICON size={24} style={{ color: 'var(--text-3)' }} />
                   }
                 </div>
@@ -198,7 +200,7 @@ export default function ItemDetailPage() {
             <div className="detail-desc-title">About this item</div>
             <div className="detail-desc-text">{item.description || 'No description provided.'}</div>
             {item.tags?.length > 0 && (
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:16 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
                 {item.tags.map((t) => <span className="tag" key={t}>{t}</span>)}
               </div>
             )}
@@ -214,17 +216,17 @@ export default function ItemDetailPage() {
                 title="View profile"
               >
                 {item.owner.avatar
-                  ? <img src={item.owner.avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%' }} />
+                  ? <img src={item.owner.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                   : item.owner.name?.[0] || '?'
                 }
               </div>
               <div
-                style={{ flex:1, cursor: 'pointer' }}
+                style={{ flex: 1, cursor: 'pointer' }}
                 onClick={() => navigate(`/profile/${item.owner._id}`)}
                 title="View profile"
               >
                 <div className="owner-card-name" style={{ textDecoration: 'underline', textDecorationColor: 'var(--text-3)' }}>{item.owner.name}</div>
-                <div className="owner-card-stat"><Star size={13} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {item.owner.rating?.toFixed(1) || '—'} · Member</div>
+                <div className="owner-card-stat"><Star size={13} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {item.owner.rating?.toFixed(1) || '—'} · Member</div>
               </div>
               {currentUser && !isOwner && (
                 <button className="btn-ghost" onClick={handleMessage}>Message</button>
@@ -234,12 +236,12 @@ export default function ItemDetailPage() {
 
           {/* Action Buttons (below details, left column — hidden on mobile, widget shows first) */}
           {!isOwner && (
-            <div className="detail-left-actions" style={{ display:'flex', flexDirection:'column', gap:10, marginTop:32 }}>
+            <div className="detail-left-actions" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 32 }}>
               <button className="booking-btn" onClick={handleRequest} disabled={requesting}>
                 {requesting ? 'Sending…' : currentUser ? 'Request to Rent' : 'Sign in to Rent'}
               </button>
               {currentUser && (
-                <button className="booking-btn-ghost" onClick={handleMessage}><MessageCircle size={16} style={{display:'inline',verticalAlign:'middle',marginRight:6}} /> Message Owner</button>
+                <button className="booking-btn-ghost" onClick={handleMessage}><MessageCircle size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} /> Message Owner</button>
               )}
             </div>
           )}
@@ -250,7 +252,7 @@ export default function ItemDetailPage() {
               <div className="section-label">Reviews ({item.totalReviews || reviews.length})</div>
             </div>
             {reviews.length === 0 ? (
-              <div style={{ color:'var(--text-3)', fontSize:14, padding:'20px 0' }}>No reviews yet.</div>
+              <div style={{ color: 'var(--text-3)', fontSize: 14, padding: '20px 0' }}>No reviews yet.</div>
             ) : (
               reviews.map((r) => (
                 <div className="review-card" key={r._id}>
@@ -259,10 +261,10 @@ export default function ItemDetailPage() {
                       <div className="review-avatar">{r.reviewer?.name?.[0] || '?'}</div>
                       <div>
                         <div className="review-name">{r.reviewer?.name || 'Anonymous'}</div>
-                        <div className="review-date">{new Date(r.createdAt).toLocaleDateString('en-US', { month:'short', year:'numeric' })}</div>
+                        <div className="review-date">{new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
                       </div>
                     </div>
-                    <div className="review-stars" style={{ display:'flex', gap:2 }}>
+                    <div className="review-stars" style={{ display: 'flex', gap: 2 }}>
                       {Array.from({ length: Math.min(r.rating, 5) }).map((_, i) => <Star key={i} size={14} fill="#f59e0b" color="#f59e0b" />)}
                     </div>
                   </div>
@@ -277,7 +279,7 @@ export default function ItemDetailPage() {
         <div className="detail-right">
           <div className="booking-widget">
             <div className="booking-price">₹{item.pricePerDay} <span>/ day</span></div>
-            <div className="booking-rating"><Star size={14} fill="#f59e0b" color="#f59e0b" style={{display:'inline',verticalAlign:'middle',marginRight:3}} /> {(item.rating > 0) ? item.rating.toFixed(1) : 'New'} · {item.totalReviews || reviews.length || 0} {(item.totalReviews || reviews.length || 0) === 1 ? 'review' : 'reviews'}</div>
+            <div className="booking-rating"><Star size={14} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }} /> {(item.rating > 0) ? item.rating.toFixed(1) : 'New'} · {item.totalReviews || reviews.length || 0} {(item.totalReviews || reviews.length || 0) === 1 ? 'review' : 'reviews'}</div>
 
             {/* Date pickers */}
             <div className="date-grid">
@@ -331,7 +333,7 @@ export default function ItemDetailPage() {
                 background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
-                <AlertTriangle size={14} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> {dateError}
+                <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> {dateError}
               </div>
             )}
 
@@ -372,7 +374,7 @@ export default function ItemDetailPage() {
                   </label>
                   {termsError && (
                     <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 6, marginLeft: 26 }}>
-                      <AlertTriangle size={11} style={{display:'inline',verticalAlign:'middle',marginRight:4}} /> You must accept the terms to continue.
+                      <AlertTriangle size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} /> You must accept the terms to continue.
                     </div>
                   )}
                 </div>
@@ -381,7 +383,7 @@ export default function ItemDetailPage() {
                   {requesting ? 'Sending…' : currentUser ? 'Request to Rent' : 'Sign in to Rent'}
                 </button>
                 {currentUser && (
-                  <button className="booking-btn-ghost" onClick={handleMessage}><MessageCircle size={16} style={{display:'inline',verticalAlign:'middle',marginRight:6}} /> Message Owner</button>
+                  <button className="booking-btn-ghost" onClick={handleMessage}><MessageCircle size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} /> Message Owner</button>
                 )}
               </>
             )}
@@ -407,7 +409,7 @@ export default function ItemDetailPage() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                    <h2 style={{ fontSize: 18, fontWeight: 700 }}><FileText size={18} style={{display:'inline',verticalAlign:'middle',marginRight:6}} /> Rental Terms &amp; Conditions</h2>
+                    <h2 style={{ fontSize: 18, fontWeight: 700 }}><FileText size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} /> Rental Terms &amp; Conditions</h2>
                     <button onClick={() => setShowTermsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', fontSize: 20, cursor: 'pointer' }}><XIcon size={20} /></button>
                   </div>
 
@@ -465,7 +467,7 @@ export default function ItemDetailPage() {
               </div>
             )}
 
-            <div style={{ textAlign:'center', fontSize:12, color:'var(--text-3)', marginTop:12 }}>
+            <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-3)', marginTop: 12 }}>
               You won't be charged until the owner accepts
             </div>
           </div>

@@ -3541,6 +3541,58 @@
   align-items: start;
 }
 
+@media (max-width: 1024px) {
+  .detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .detail-left,
+  .detail-right {
+    display: contents;
+  }
+
+  .detail-gallery {
+    order: 1;
+    width: 100%;
+  }
+
+  .booking-widget {
+    order: 2;
+    width: 100%;
+  }
+
+  .detail-desc {
+    order: 3;
+    width: 100%;
+  }
+
+  .owner-card {
+    order: 4;
+    width: 100%;
+  }
+
+  .reviews-section {
+    order: 5;
+    width: 100%;
+  }
+
+  .detail-left-actions {
+    display: none !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .detail-header {
+    padding: 16px 0 16px;
+  }
+
+  .detail-title {
+    font-size: 28px;
+  }
+}
+
 .detail-gallery {
   border-radius: var(--r-card);
   overflow: hidden;
@@ -3679,6 +3731,13 @@
   top: 88px;
 }
 
+@media (max-width: 1024px) {
+  .booking-widget {
+    position: static !important;
+    padding: 20px;
+  }
+}
+
 .booking-price {
   font-family: 'JetBrains Mono', monospace;
   font-size: 30px;
@@ -3703,13 +3762,14 @@
 }
 
 .date-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
 }
 
 .date-field {
+  flex: 1 1 140px;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
