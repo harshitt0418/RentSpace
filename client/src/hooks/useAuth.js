@@ -72,7 +72,7 @@ export const useRestoreAuth = () => {
 // Registration either sends OTP (→ /verify-otp) or auto-verifies (→ /dashboard)
 export const useRegister = () => {
   const navigate = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
+  const { setAuth, setPendingEmail } = useAuthStore()
 
   return useMutation({
     mutationFn: authApi.register,
@@ -83,8 +83,9 @@ export const useRegister = () => {
         toast.success(`Welcome, ${data.user.name?.split(' ')[0] || ''}! 🎉`, { id: 'auth-welcome' })
         navigate('/dashboard')
       } else {
-        // Normal OTP verification flow — persist email so refresh doesn't lose it
-        sessionStorage.setItem('otp-pending-email', data.email)
+        // Normal OTP verification flow — persist email to localStorage via Zustand
+        // so it survives a hard page refresh on the /verify-otp page.
+        setPendingEmail(data.email)
         toast.success('OTP sent to your email!', { id: 'auth-otp' })
         navigate('/verify-otp', { state: { email: data.email } })
       }
@@ -97,13 +98,13 @@ export const useRegister = () => {
 
 /* ── Verify OTP (completes registration) ──────────────────────────────── */
 export const useVerifyOTP = () => {
-  const { setAuth } = useAuthStore()
+  const { setAuth, setPendingEmail } = useAuthStore()
   const navigate = useNavigate()
 
   return useMutation({
     mutationFn: authApi.verifyOTP,
     onSuccess: (data) => {
-      sessionStorage.removeItem('otp-pending-email') // clean up
+      setPendingEmail(null) // clear the pending email from localStorage
       setAuth(data.user, data.accessToken)
       toast.success(`Welcome to RentSpace, ${data.user.name}! 🎉`, { id: 'auth-welcome' })
       navigate('/dashboard')

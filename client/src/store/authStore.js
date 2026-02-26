@@ -12,32 +12,28 @@ const useAuthStore = create(
     (set, get) => ({
       user: null,
       accessToken: null,
+      pendingEmail: null,  // email awaiting OTP confirmation — persists to localStorage
       isLoading: false,
-      isRestoring: true,   // true until useRestoreAuth finishes its first check
-      hasHydrated: false,   // true once zustand persist rehydrates from localStorage
+      isRestoring: true,
+      hasHydrated: false,
 
       /* ── Setters ───────────────────────────────────────────────────── */
       setUser: (user) => set({ user }),
-
       setAuth: (user, accessToken) => set({ user, accessToken }),
-
       setAccessToken: (accessToken) => set({ accessToken }),
-
       setLoading: (isLoading) => set({ isLoading }),
-
       setRestoring: (isRestoring) => set({ isRestoring }),
-
       setHasHydrated: (v) => set({ hasHydrated: v }),
-
-      clearAuth: () => set({ user: null, accessToken: null }),
+      setPendingEmail: (pendingEmail) => set({ pendingEmail }),
+      clearAuth: () => set({ user: null, accessToken: null, pendingEmail: null }),
 
       /* ── Derived ───────────────────────────────────────────────────── */
       isAuthenticated: () => !!get().user && !!get().accessToken,
     }),
     {
       name: 'rentspace-auth',
-      // Only persist user object, NOT the access token (security)
-      partialize: (state) => ({ user: state.user }),
+      // Only persist user and pendingEmail — NOT the access token (security)
+      partialize: (state) => ({ user: state.user, pendingEmail: state.pendingEmail }),
       // Signal when rehydration from localStorage is complete
       onRehydrateStorage: () => (state) => {
         if (state) state.setHasHydrated(true)
