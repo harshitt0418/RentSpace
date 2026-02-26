@@ -29,7 +29,13 @@ export default function AdminPanel() {
     const [tab, setTab] = useState('overview')
     const user = useAuthStore((s) => s.user)
     const clearAuth = useAuthStore((s) => s.clearAuth)
+    const isRestoring = useAuthStore((s) => s.isRestoring)
     const navigate = useNavigate()
+
+    // Wait for session restore before checking role
+    if (isRestoring) {
+        return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)', color: 'var(--text-2)' }}>Loading…</div>
+    }
 
     // Guard: redirect non-admins
     if (!user || user.role !== 'admin') {
