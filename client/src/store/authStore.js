@@ -12,7 +12,7 @@ const useAuthStore = create(
     (set, get) => ({
       user: null,
       accessToken: null,
-      pendingEmail: null,  // email awaiting OTP confirmation — persists to localStorage
+      pendingEmail: null,  // email awaiting OTP — persisted so refresh doesn't lose it
       isLoading: false,
       isRestoring: true,
       hasHydrated: false,
@@ -24,7 +24,7 @@ const useAuthStore = create(
       setLoading: (isLoading) => set({ isLoading }),
       setRestoring: (isRestoring) => set({ isRestoring }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
-      setPendingEmail: (pendingEmail) => set({ pendingEmail }),
+      setPendingEmail: (email) => set({ pendingEmail: email }),
       clearAuth: () => set({ user: null, accessToken: null, pendingEmail: null }),
 
       /* ── Derived ───────────────────────────────────────────────────── */
@@ -32,7 +32,7 @@ const useAuthStore = create(
     }),
     {
       name: 'rentspace-auth',
-      // Only persist user and pendingEmail — NOT the access token (security)
+      // Persist user and pendingEmail — NOT the access token (security)
       partialize: (state) => ({ user: state.user, pendingEmail: state.pendingEmail }),
       // Signal when rehydration from localStorage is complete
       onRehydrateStorage: () => (state) => {

@@ -24,10 +24,9 @@ export const useRestoreAuth = () => {
   const query = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.getMe,
-    // Attempt restore only when:
-    //  1. Zustand has rehydrated from localStorage
-    //  2. A user object exists in the store (i.e. they were previously logged in)
-    //  3. The access token is missing (page refresh — token lives in memory only)
+    // Only attempt restore if:
+    //  1. Zustand has rehydrated from localStorage (hasHydrated)
+    //  2. User is persisted but token is missing (page refresh scenario)
     enabled: hasHydrated && !!user && !accessToken,
     retry: false,
     staleTime: 30_000,
@@ -35,19 +34,20 @@ export const useRestoreAuth = () => {
 
   // Mark restore complete once query settles (success or error)
   useEffect(() => {
+    // Wait for zustand to rehydrate from localStorage first
     if (!hasHydrated) return
 
-    // No user in store → nothing to restore, proceed immediately
+    // If no user in localStorage, no restore needed — clear the flag immediately
     if (!user) {
       setRestoring(false)
       return
     }
-    // Access token already in memory (freshly logged in) → no restore needed
+    // If token already in memory (e.g. freshly logged in), no restore needed
     if (accessToken) {
       setRestoring(false)
       return
     }
-    // Otherwise wait for the /auth/me query to settle
+    // Otherwise wait for the query to settle
     if (query.isSuccess || query.isError) {
       setRestoring(false)
     }
@@ -55,14 +55,16 @@ export const useRestoreAuth = () => {
 
   useEffect(() => {
     if (query.data) {
+      // By now the interceptor has already set the new access token in the store
       setAuth(query.data.user, useAuthStore.getState().accessToken)
     }
   }, [query.data]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // NOTE: we intentionally do NOT call clearAuth() on error here.
-  // If the restore fails (e.g. expired refresh cookie), we leave the user object
-  // in the store so the app doesn't flash to login on every network hiccup.
-  // ProtectedRoute handles the redirect when it sees no accessToken.
+  useEffect(() => {
+    if (query.error) {
+      useAuthStore.getState().clearAuth()
+    }
+  }, [query.error]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return query
 }
@@ -78,13 +80,11 @@ export const useRegister = () => {
     mutationFn: authApi.register,
     onSuccess: (data) => {
       if (data.accessToken && data.user) {
-        // Auto-verified (email config unavailable) — log in directly
         setAuth(data.user, data.accessToken)
         toast.success(`Welcome, ${data.user.name?.split(' ')[0] || ''}! 🎉`, { id: 'auth-welcome' })
         navigate('/dashboard')
       } else {
-        // Normal OTP verification flow — persist email to localStorage via Zustand
-        // so it survives a hard page refresh on the /verify-otp page.
+        // Save email to localStorage via Zustand so it survives a page refresh
         setPendingEmail(data.email)
         toast.success('OTP sent to your email!', { id: 'auth-otp' })
         navigate('/verify-otp', { state: { email: data.email } })
@@ -104,7 +104,7 @@ export const useVerifyOTP = () => {
   return useMutation({
     mutationFn: authApi.verifyOTP,
     onSuccess: (data) => {
-      setPendingEmail(null) // clear the pending email from localStorage
+      setPendingEmail(null) // clear from localStorage
       setAuth(data.user, data.accessToken)
       toast.success(`Welcome to RentSpace, ${data.user.name}! 🎉`, { id: 'auth-welcome' })
       navigate('/dashboard')

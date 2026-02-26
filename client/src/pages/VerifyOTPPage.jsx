@@ -9,8 +9,10 @@ import useAuthStore from '@/store/authStore'
 export default function VerifyOTPPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, hasHydrated, pendingEmail } = useAuthStore()
-  // Priority: router state → pendingEmail in store (persists to localStorage) → user.email
+  const user = useAuthStore((s) => s.user)
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
+  const pendingEmail = useAuthStore((s) => s.pendingEmail)
+  // Priority: router state → pendingEmail in store (persisted to localStorage) → user.email
   const email = location.state?.email || pendingEmail || user?.email
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -21,8 +23,8 @@ export default function VerifyOTPPage() {
   const { mutate: verifyOTP, isPending: verifying } = useVerifyOTP()
   const { mutate: resendOTP, isPending: resending } = useResendOTP()
 
-  // Wait for Zustand to hydrate from localStorage before deciding if we should redirect.
-  // pendingEmail is persisted, so it will survive a hard page refresh.
+  // Wait for Zustand to hydrate from localStorage before checking for email.
+  // pendingEmail is persisted to localStorage, so it survives a hard page refresh.
   useEffect(() => {
     if (!hasHydrated) return
     if (!email) navigate('/signup', { replace: true })
