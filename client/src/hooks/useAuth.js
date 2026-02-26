@@ -24,10 +24,13 @@ export const useRestoreAuth = () => {
   const query = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.getMe,
-    // Only attempt restore if:
+    // Attempt restore whenever:
     //  1. Zustand has rehydrated from localStorage (hasHydrated)
-    //  2. User is persisted but token is missing (page refresh scenario)
-    enabled: hasHydrated && !!user && !accessToken,
+    //  2. No access token in memory (page refresh — token lives only in memory)
+    // We deliberately do NOT require `!!user` here. If the previous restore
+    // cleared the user from the store (on a failed /auth/me), we still need to
+    // try again on the next refresh using the httpOnly refresh-token cookie.
+    enabled: hasHydrated && !accessToken,
     retry: false,
     staleTime: 30_000,
   })
@@ -37,11 +40,6 @@ export const useRestoreAuth = () => {
     // Wait for zustand to rehydrate from localStorage first
     if (!hasHydrated) return
 
-    // If no user in localStorage, no restore needed — clear the flag immediately
-    if (!user) {
-      setRestoring(false)
-      return
-    }
     // If token already in memory (e.g. freshly logged in), no restore needed
     if (accessToken) {
       setRestoring(false)
@@ -51,7 +49,7 @@ export const useRestoreAuth = () => {
     if (query.isSuccess || query.isError) {
       setRestoring(false)
     }
-  }, [hasHydrated, user, accessToken, query.isSuccess, query.isError]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasHydrated, accessToken, query.isSuccess, query.isError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (query.data) {
