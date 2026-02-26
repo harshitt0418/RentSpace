@@ -11,8 +11,8 @@ export default function VerifyOTPPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
-  // Get email from router state OR fallback to the user store if they are partially authenticated
-  const email = location.state?.email || user?.email
+  // Check: router state → auth store → sessionStorage (survives page refresh)
+  const email = location.state?.email || user?.email || sessionStorage.getItem('otp-pending-email')
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
@@ -22,12 +22,14 @@ export default function VerifyOTPPage() {
   const { mutate: verifyOTP, isPending: verifying } = useVerifyOTP()
   const { mutate: resendOTP, isPending: resending } = useResendOTP()
 
-  // Wait for Zustand to rehydrate from localStorage before checking for email.
-  // Without this guard, on a hard refresh the user is still null while Zustand
-  // loads from disk, causing a false redirect to /signup.
+  // Only redirect to /signup if there is genuinely no email from any source.
+  // sessionStorage fallback handles the page-refresh case.
   useEffect(() => {
-    if (!hasHydrated) return   // still loading from localStorage — wait
-    if (!email) navigate('/signup', { replace: true })
+    if (!hasHydrated) return
+    if (!email) {
+      sessionStorage.removeItem('otp-pending-email')
+      navigate('/signup', { replace: true })
+    }
   }, [email, hasHydrated, navigate])
 
   // Countdown timer for resend

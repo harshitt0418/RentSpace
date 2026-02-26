@@ -85,7 +85,8 @@ export const useRegister = () => {
         toast.success(`Welcome, ${data.user.name?.split(' ')[0] || ''}! 🎉`, { id: 'auth-welcome' })
         navigate('/dashboard')
       } else {
-        // Normal OTP verification flow
+        // Normal OTP verification flow — persist email so refresh doesn't lose it
+        sessionStorage.setItem('otp-pending-email', data.email)
         toast.success('OTP sent to your email!', { id: 'auth-otp' })
         navigate('/verify-otp', { state: { email: data.email } })
       }
@@ -104,6 +105,7 @@ export const useVerifyOTP = () => {
   return useMutation({
     mutationFn: authApi.verifyOTP,
     onSuccess: (data) => {
+      sessionStorage.removeItem('otp-pending-email') // clean up
       setAuth(data.user, data.accessToken)
       toast.success(`Welcome to RentSpace, ${data.user.name}! 🎉`, { id: 'auth-welcome' })
       navigate('/dashboard')
