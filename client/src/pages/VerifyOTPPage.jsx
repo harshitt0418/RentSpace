@@ -85,6 +85,10 @@ export default function VerifyOTPPage() {
     setCountdown(60)
   }
 
+  // While Zustand is still rehydrating from localStorage, show nothing (avoids blank flash)
+  if (!hasHydrated) return null
+
+  // After hydration, if there's still no email, the useEffect will redirect to /signup
   if (!email) return null
 
   return (
