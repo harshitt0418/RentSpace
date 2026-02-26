@@ -58,6 +58,11 @@ async function seedAdmin() {
         location: 'System',
       })
       console.log('✅ Admin account seeded: admin@rentspace.app')
+    } else {
+      // Always sync the password in case it was changed in code
+      exists.password = ADMIN_PASSWORD
+      await exists.save()
+      console.log('✅ Admin account password synced.')
     }
   } catch (err) {
     console.error('⚠️  Admin seed error:', err.message)
