@@ -22,6 +22,19 @@ const transporter = nodemailer.createTransport({
  * @param {string} options.html    - HTML body
  */
 const sendEmail = async ({ to, subject, html }) => {
+  // If email is not configured (no credentials), log to console and skip
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log('────────────────────────────────────────────')
+    console.log(`📧  [DEV MODE] Email not sent — no credentials`)
+    console.log(`   To:      ${to}`)
+    console.log(`   Subject: ${subject}`)
+    // Extract OTP from HTML if present (matches 6 consecutive digits)
+    const otpMatch = html.match(/\b(\d{6})\b/)
+    if (otpMatch) console.log(`   OTP CODE: ${otpMatch[1]}`)
+    console.log('────────────────────────────────────────────')
+    return   // pretend it succeeded
+  }
+
   await transporter.sendMail({
     from: `"RentSpace" <${process.env.EMAIL_USER}>`,
     to,
