@@ -4,11 +4,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useVerifyOTP, useResendOTP } from '@/hooks/useAuth'
+import useAuthStore from '@/store/authStore'
 
 export default function VerifyOTPPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const email = location.state?.email
+  const user = useAuthStore((s) => s.user)
+  // Get email from router state OR fallback to the user store if they are partially authenticated
+  const email = location.state?.email || user?.email
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
@@ -18,9 +21,9 @@ export default function VerifyOTPPage() {
   const { mutate: verifyOTP, isPending: verifying } = useVerifyOTP()
   const { mutate: resendOTP, isPending: resending } = useResendOTP()
 
-  // Redirect if no email in state
+  // Redirect if NO email could be found in state or store
   useEffect(() => {
-    if (!email) navigate('/signup')
+    if (!email) navigate('/signup', { replace: true })
   }, [email, navigate])
 
   // Countdown timer for resend

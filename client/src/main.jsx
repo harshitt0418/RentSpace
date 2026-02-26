@@ -45,10 +45,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
               fontSize: '0.875rem',
             },
             success: {
-              iconTheme: { primary: '#6366f1', secondary: '#fff' },
+              iconTheme: { primary: 'var(--accent)', secondary: 'var(--bg)' },
             },
             error: {
-              iconTheme: { primary: '#ef4444', secondary: '#fff' },
+              iconTheme: { primary: 'var(--danger)', secondary: 'var(--bg)' },
             },
           }}
         />

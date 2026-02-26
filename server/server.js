@@ -43,7 +43,7 @@ connectDB()
 
 // ── Seed admin account ────────────────────────────────────────────────────────
 const ADMIN_EMAIL = 'admin@rentspace.app'
-const ADMIN_PASSWORD = 'Admin@2026'
+const ADMIN_PASSWORD = '@AIaiAI2004'
 
 async function seedAdmin() {
   try {

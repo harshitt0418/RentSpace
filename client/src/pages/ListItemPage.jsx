@@ -1,7 +1,7 @@
 /**
  * ListItemPage.jsx — demoui-matched 4-step wizard
  */
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateItem } from '@/hooks/useItems'
 import LocationPicker from '@/components/LocationPicker'
@@ -46,12 +46,55 @@ export default function ListItemPage() {
     clearErr(e.target.name)
   }
 
-  const handleFiles = (e) => {
-    const files = Array.from(e.target.files || [])
-    const previews = files.slice(0, 6 - images.length).map((f) => URL.createObjectURL(f))
-    setImages((p) => [...p, ...previews])
-    setImageFiles((p) => [...p, ...files.slice(0, 6 - p.length)])
+  const [dragActive, setDragActive] = useState(false)
+
+  const addFiles = (newFiles) => {
+    const valid = newFiles.filter(f => f.type && f.type.startsWith('image/'))
+    if (!valid.length) return
+    setImages((prev) => {
+      if (prev.length >= 6) return prev
+      const taking = valid.slice(0, 6 - prev.length)
+      const previews = taking.map(f => URL.createObjectURL(f))
+      setImageFiles(pf => [...pf, ...taking])
+      return [...prev, ...previews]
+    })
+    clearErr('photos')
   }
+
+  const handleFiles = (e) => addFiles(Array.from(e.target.files || []))
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addFiles(Array.from(e.dataTransfer.files))
+    }
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    setDragActive(true)
+  }
+
+  const handleDragLeave = (e) => {
+    e.preventDefault()
+    setDragActive(false)
+  }
+
+  // Ctrl+V paste support for images
+  useEffect(() => {
+    if (step !== 2) return
+    const handlePaste = (e) => {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items
+      const files = []
+      for (const item of items) {
+        if (item.kind === 'file') files.push(item.getAsFile())
+      }
+      if (files.length > 0) addFiles(files)
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [step])
 
   const goStep = (s) => setStep(s)
 
@@ -206,10 +249,16 @@ export default function ListItemPage() {
           <div
             className="upload-zone"
             onClick={() => fileRef.current?.click()}
-            style={errors.photos ? { borderColor: 'var(--danger)' } : {}}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            style={{
+              ...(errors.photos ? { borderColor: 'var(--danger)' } : {}),
+              ...(dragActive ? { borderColor: 'var(--accent)', background: 'rgba(226, 114, 91, 0.05)' } : {})
+            }}
           >
             <div className="upload-icon">📁</div>
-            <div className="upload-text">Drag photos here or click to upload</div>
+            <div className="upload-text">Drag photos, paste (Ctrl+V), or click to upload</div>
             <div className="upload-sub">Up to 6 photos · JPG, PNG · Max 10MB each</div>
             <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFiles} />
           </div>
