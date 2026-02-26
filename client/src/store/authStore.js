@@ -14,6 +14,7 @@ const useAuthStore = create(
       accessToken: null,
       isLoading: false,
       isRestoring: true,   // true until useRestoreAuth finishes its first check
+      hasHydrated: false,   // true once zustand persist rehydrates from localStorage
 
       /* ── Setters ───────────────────────────────────────────────────── */
       setUser: (user) => set({ user }),
@@ -26,6 +27,8 @@ const useAuthStore = create(
 
       setRestoring: (isRestoring) => set({ isRestoring }),
 
+      setHasHydrated: (v) => set({ hasHydrated: v }),
+
       clearAuth: () => set({ user: null, accessToken: null }),
 
       /* ── Derived ───────────────────────────────────────────────────── */
@@ -35,6 +38,10 @@ const useAuthStore = create(
       name: 'rentspace-auth',
       // Only persist user object, NOT the access token (security)
       partialize: (state) => ({ user: state.user }),
+      // Signal when rehydration from localStorage is complete
+      onRehydrateStorage: () => (state) => {
+        if (state) state.setHasHydrated(true)
+      },
     }
   )
 )

@@ -18,19 +18,25 @@ import useAuthStore from '@/store/authStore'
 export const useRestoreAuth = () => {
   const user = useAuthStore((s) => s.user)
   const accessToken = useAuthStore((s) => s.accessToken)
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const { setAuth, setRestoring } = useAuthStore()
 
   const query = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: authApi.getMe,
-    // Only attempt restore if user is persisted but token is missing (page refresh)
-    enabled: !!user && !accessToken,
+    // Only attempt restore if:
+    //  1. Zustand has rehydrated from localStorage (hasHydrated)
+    //  2. User is persisted but token is missing (page refresh scenario)
+    enabled: hasHydrated && !!user && !accessToken,
     retry: false,
     staleTime: 30_000,
   })
 
   // Mark restore complete once query settles (success or error)
   useEffect(() => {
+    // Wait for zustand to rehydrate from localStorage first
+    if (!hasHydrated) return
+
     // If no user in localStorage, no restore needed — clear the flag immediately
     if (!user) {
       setRestoring(false)
@@ -45,7 +51,7 @@ export const useRestoreAuth = () => {
     if (query.isSuccess || query.isError) {
       setRestoring(false)
     }
-  }, [user, accessToken, query.isSuccess, query.isError]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasHydrated, user, accessToken, query.isSuccess, query.isError]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (query.data) {
