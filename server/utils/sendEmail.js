@@ -1,75 +1,123 @@
 /**
  * utils/sendEmail.js
- * Nodemailer helper — sends transactional emails (OTP, password reset, etc.)
+ * Email helper — sends transactional emails (OTP, password reset, etc.)
+ *
+ * Supports two backends:
+ *  1. Resend HTTP API  (recommended for Render / cloud — no SMTP ports needed)
+ *     Set RESEND_API_KEY in env to enable.
+ *  2. Nodemailer SMTP  (works locally / when SMTP port 587 is open)
+ *     Set EMAIL_USER + EMAIL_PASS in env to enable.
+ *
+ * Priority: Resend → SMTP → Console fallback
  */
 const nodemailer = require('nodemailer')
 
-const EMAIL_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
+/* ─── Feature flags ──────────────────────────────────────────────────────── */
+const RESEND_CONFIGURED = !!process.env.RESEND_API_KEY
+const SMTP_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,   // false = STARTTLS (correct for port 587)
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  // NOTE: no tls override — Gmail needs its real certificate to be verified
-})
+/* ─── SMTP transporter (only created if SMTP credentials exist) ──────── */
+let transporter = null
+if (SMTP_CONFIGURED) {
+  transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: Number(process.env.EMAIL_PORT) || 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  })
 
-// Verify SMTP at startup so misconfiguration is caught early
-if (EMAIL_CONFIGURED) {
   transporter.verify((err) => {
     if (err) {
       console.error('❌ SMTP connection failed:', err.message)
-      console.error('   → Emails will be logged to console as fallback')
+      console.error('   → Will use Resend API or console fallback')
     } else {
       console.log('✅ SMTP ready — emails enabled for:', process.env.EMAIL_USER)
     }
   })
 }
 
-/**
- * Log OTP to console (dev fallback when SMTP is unavailable or fails)
- */
+if (RESEND_CONFIGURED) {
+  console.log('✅ Resend API key configured — using HTTP API for emails')
+}
+if (!RESEND_CONFIGURED && !SMTP_CONFIGURED) {
+  console.log('⚠️  No email provider configured — OTPs will be logged to console')
+}
+
+/* ─── Send via Resend HTTP API (no SMTP ports needed) ────────────────── */
+const sendViaResend = async ({ to, subject, html }) => {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM || 'RentSpace <onboarding@resend.dev>',
+      to: [to],
+      subject,
+      html,
+    }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Resend API error (${res.status}): ${body}`)
+  }
+
+  console.log(`📧 Email sent via Resend to: ${to}`)
+}
+
+/* ─── Send via SMTP (Nodemailer) with timeout ────────────────────────── */
+const sendViaSMTP = async ({ to, subject, html }) => {
+  const SEND_TIMEOUT = 20000
+  const mailPromise = transporter.sendMail({
+    from: `"RentSpace" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+  })
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('SMTP timed out after 20s')), SEND_TIMEOUT)
+  )
+
+  await Promise.race([mailPromise, timeoutPromise])
+  console.log(`📧 Email sent via SMTP to: ${to}`)
+}
+
+/* ─── Console fallback ───────────────────────────────────────────────── */
 const logToConsole = ({ to, subject, html }) => {
   const otpMatch = html.match(/\b(\d{6})\b/)
   console.log('\n────────────────────────────────────────────')
-  console.log(`📧  [EMAIL FALLBACK] Could not send via SMTP`)
+  console.log(`📧  [FALLBACK] No email provider — logging instead`)
   console.log(`   To:      ${to}`)
   console.log(`   Subject: ${subject}`)
   if (otpMatch) console.log(`   ⭐ OTP CODE: ${otpMatch[1]} ⭐`)
   console.log('────────────────────────────────────────────\n')
 }
 
-/**
- * Send an email — logs to console if email is unconfigured (dev only)
- */
+/* ─── Main send function ─────────────────────────────────────────────── */
 const sendEmail = async ({ to, subject, html }) => {
-  if (!EMAIL_CONFIGURED) {
-    // Dev fallback: no email credentials — print OTP to console
-    const otpMatch = html.match(/\b(\d{6})\b/)
-    console.log('\n────────────────────────────────────────────')
-    console.log(`📧  [DEV] No SMTP credentials — logging email instead`)
-    console.log(`   To:      ${to}`)
-    console.log(`   Subject: ${subject}`)
-    if (otpMatch) console.log(`   ⭐ OTP CODE: ${otpMatch[1]} ⭐`)
-    console.log('────────────────────────────────────────────\n')
-    return
+  // 1. Try Resend (HTTP API — works on Render)
+  if (RESEND_CONFIGURED) {
+    return sendViaResend({ to, subject, html })
   }
 
-  // Credentials are set — let any SMTP error propagate so it's visible in logs
-  await transporter.sendMail({
-    from: `"RentSpace" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  })
+  // 2. Try SMTP (works locally or on hosts that allow port 587)
+  if (SMTP_CONFIGURED && transporter) {
+    return sendViaSMTP({ to, subject, html })
+  }
+
+  // 3. Console fallback (dev only)
+  logToConsole({ to, subject, html })
 }
 
-/**
- * Send OTP verification email
- */
+/* ─── OTP verification email ─────────────────────────────────────────── */
 const sendOTPEmail = async (email, otp) => {
   await sendEmail({
     to: email,
@@ -98,9 +146,7 @@ const sendOTPEmail = async (email, otp) => {
   })
 }
 
-/**
- * Send password-reset OTP email
- */
+/* ─── Password-reset OTP email ───────────────────────────────────────── */
 const sendPasswordResetEmail = async (email, otp) => {
   await sendEmail({
     to: email,
