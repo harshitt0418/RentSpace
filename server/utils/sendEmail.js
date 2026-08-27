@@ -2,58 +2,47 @@
  * utils/sendEmail.js
  * Email helper — sends transactional emails (OTP, password reset, etc.)
  *
- * Supports two backends:
- *  1. Resend HTTP API  (recommended for Render / cloud — no SMTP ports needed)
- *     Set RESEND_API_KEY in env to enable.
- *  2. Nodemailer SMTP  (works locally / when SMTP port 587 is open)
- *     Set EMAIL_USER + EMAIL_PASS in env to enable.
+ * Priority: Resend HTTP API → SMTP (local only) → Console fallback
  *
- * Priority: Resend → SMTP → Console fallback
+ * On Render/cloud: use RESEND_API_KEY (port 587 is blocked by Render).
+ * Locally: set EMAIL_USER + EMAIL_PASS for SMTP, or just use Resend.
  */
 const nodemailer = require('nodemailer')
 
 /* ─── Feature flags ──────────────────────────────────────────────────────── */
 const RESEND_CONFIGURED = !!process.env.RESEND_API_KEY
 
-// Only treat SMTP as configured if credentials look real (not placeholder values)
+// SMTP is only used when Resend is NOT configured AND real credentials exist
 const _emailUser = process.env.EMAIL_USER || ''
 const _emailPass = process.env.EMAIL_PASS || ''
-const _isPlaceholder = _emailUser.includes('placeholder') || _emailPass.includes('placeholder') || !_emailUser || !_emailPass
-const SMTP_CONFIGURED = !_isPlaceholder
+const _isPlaceholder = !_emailUser || !_emailPass ||
+  _emailUser.includes('placeholder') || _emailPass.includes('placeholder')
+// Don't even create an SMTP transporter if Resend is already handling emails
+const SMTP_CONFIGURED = !RESEND_CONFIGURED && !_isPlaceholder
 
-/* ─── SMTP transporter (only created if real SMTP credentials exist) ─── */
+/* ─── SMTP transporter — created silently, NO startup verify call ─────── */
+// transporter.verify() is intentionally removed: Render blocks outbound port
+// 587 causing a connection timeout error on every deploy. SMTP is only used
+// locally as a fallback when Resend is not configured.
 let transporter = null
 if (SMTP_CONFIGURED) {
   transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: Number(process.env.EMAIL_PORT) || 587,
     secure: false,
-    auth: {
-      user: _emailUser,
-      pass: _emailPass,
-    },
+    auth: { user: _emailUser, pass: _emailPass },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
   })
-
-  // Only verify if we have real credentials
-  transporter.verify((err) => {
-    if (err) {
-      console.error('❌ SMTP connection failed:', err.message)
-      console.error('   → Will use Resend API or console fallback')
-    } else {
-      console.log('✅ SMTP ready — emails enabled for:', _emailUser)
-    }
-  })
-} else if (_isPlaceholder && (_emailUser || _emailPass)) {
-  console.log('⚠️  SMTP skipped — placeholder credentials detected, set real EMAIL_USER/EMAIL_PASS to enable')
 }
 
+/* ─── Startup log (one clean line, no SMTP timeout noise) ─────────────── */
 if (RESEND_CONFIGURED) {
   console.log('✅ Resend API key configured — using HTTP API for emails')
-}
-if (!RESEND_CONFIGURED && !SMTP_CONFIGURED) {
+} else if (SMTP_CONFIGURED) {
+  console.log('✅ SMTP configured — emails enabled for:', _emailUser)
+} else {
   console.log('⚠️  No email provider configured — OTPs will be logged to console')
 }
 
