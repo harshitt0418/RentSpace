@@ -14,9 +14,14 @@ const nodemailer = require('nodemailer')
 
 /* ─── Feature flags ──────────────────────────────────────────────────────── */
 const RESEND_CONFIGURED = !!process.env.RESEND_API_KEY
-const SMTP_CONFIGURED = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS)
 
-/* ─── SMTP transporter (only created if SMTP credentials exist) ──────── */
+// Only treat SMTP as configured if credentials look real (not placeholder values)
+const _emailUser = process.env.EMAIL_USER || ''
+const _emailPass = process.env.EMAIL_PASS || ''
+const _isPlaceholder = _emailUser.includes('placeholder') || _emailPass.includes('placeholder') || !_emailUser || !_emailPass
+const SMTP_CONFIGURED = !_isPlaceholder
+
+/* ─── SMTP transporter (only created if real SMTP credentials exist) ─── */
 let transporter = null
 if (SMTP_CONFIGURED) {
   transporter = nodemailer.createTransport({
@@ -24,22 +29,25 @@ if (SMTP_CONFIGURED) {
     port: Number(process.env.EMAIL_PORT) || 587,
     secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: _emailUser,
+      pass: _emailPass,
     },
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
   })
 
+  // Only verify if we have real credentials
   transporter.verify((err) => {
     if (err) {
       console.error('❌ SMTP connection failed:', err.message)
       console.error('   → Will use Resend API or console fallback')
     } else {
-      console.log('✅ SMTP ready — emails enabled for:', process.env.EMAIL_USER)
+      console.log('✅ SMTP ready — emails enabled for:', _emailUser)
     }
   })
+} else if (_isPlaceholder && (_emailUser || _emailPass)) {
+  console.log('⚠️  SMTP skipped — placeholder credentials detected, set real EMAIL_USER/EMAIL_PASS to enable')
 }
 
 if (RESEND_CONFIGURED) {

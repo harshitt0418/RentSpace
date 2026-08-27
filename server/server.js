@@ -114,16 +114,8 @@ app.set('trust proxy', 1)
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet())
 
-// ── CORS — allow frontend origins ────────────────────────────────────────────
-const allowedOrigin = (origin, callback) => {
-  // Allow any localhost port in development; lock down in production
-  if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || origin === process.env.CLIENT_URL) {
-    callback(null, true)
-  } else {
-    callback(new Error('Not allowed by CORS'))
-  }
-}
-app.use(cors({ origin: allowedOrigin, credentials: true }))
+// ── CORS — allow all origins ────────────────────────────────────────────────
+app.use(cors({ origin: true, credentials: true }))
 
 // ── Passport (stateless JWT, no session needed) ───────────────────────────────
 app.use(passport.initialize())
