@@ -362,7 +362,9 @@ exports.googleCallback = async (req, res, next) => {
     setRefreshCookie(res, refreshToken)
 
     const accessToken = generateAccessToken(user._id)
-    const clientURL = process.env.CLIENT_URL || 'http://localhost:5173'
+    // FRONTEND_URL takes priority, then CLIENT_URL, then localhost fallback
+    // On Render: set FRONTEND_URL=https://rentspace.vercel.app
+    const clientURL = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:5174'
     res.redirect(`${clientURL}/auth/callback?token=${accessToken}`)
   } catch (err) {
     next(err)

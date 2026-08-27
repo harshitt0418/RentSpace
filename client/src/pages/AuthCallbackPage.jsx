@@ -33,15 +33,11 @@ async function autoSetLocation() {
       async ({ coords }) => {
         const city = await getCityFromCoords(coords.latitude, coords.longitude)
         if (city) {
-          try {
-            await updateProfile({ location: city })
-          } catch {
-            // silently ignore — non-critical
-          }
+          try { await updateProfile({ location: city }) } catch { /* non-critical */ }
         }
         resolve()
       },
-      () => resolve(), // denied or error — silent
+      () => resolve(),
       { timeout: 8000 }
     )
   })
@@ -53,7 +49,6 @@ export default function AuthCallbackPage() {
   const setAuth = useAuthStore((s) => s.setAuth)
 
   useEffect(() => {
-    // React 18 StrictMode runs effects twice — this flag prevents double execution
     let cancelled = false
 
     const token = params.get('token')
@@ -63,25 +58,25 @@ export default function AuthCallbackPage() {
       return
     }
 
-    // Temporarily inject token so the axios interceptor can use it
+    // Inject token into store so the axios interceptor attaches it as Bearer on getMe()
     useAuthStore.setState({ accessToken: token })
 
     getMe()
       .then(async (data) => {
         if (cancelled) return
         setAuth(data.user, token)
-        toast.success(`Welcome${data.user.name ? ', ' + data.user.name.split(' ')[0] : ''}! 🎉`, { id: 'auth-welcome' })
-
-        // If user has no location (e.g. brand-new Google sign-up), auto-detect it silently
-        if (!data.user.location) {
-          await autoSetLocation()
-        }
-
+        toast.success(
+          `Welcome${data.user.name ? ', ' + data.user.name.split(' ')[0] : ''}! 🎉`,
+          { id: 'auth-welcome' }
+        )
+        if (!data.user.location) await autoSetLocation()
         navigate('/dashboard')
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return
-        toast.error('Could not load your profile — please try again', { id: 'auth-error' })
+        console.error('[AuthCallback] getMe failed:', err?.response?.data || err.message)
+        toast.error('Sign-in failed — please try again', { id: 'auth-error' })
+        useAuthStore.setState({ accessToken: null })
         navigate('/login')
       })
 
@@ -92,10 +87,18 @@ export default function AuthCallbackPage() {
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', height: '100vh', gap: 16,
-      background: 'var(--bg)', color: 'var(--text-2)',
+      background: 'var(--bg, #0f0f1a)', color: 'var(--text-2, #94a3b8)',
     }}>
-      <div style={{ fontSize: 40 }}>🔐</div>
-      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1)' }}>Completing sign in…</div>
+      <div style={{
+        width: 48, height: 48, borderRadius: '50%',
+        border: '3px solid rgba(99,102,241,0.2)',
+        borderTop: '3px solid #6366f1',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-1, #f1f5f9)' }}>
+        Completing sign in…
+      </div>
       <div style={{ fontSize: 14 }}>You'll be redirected in a moment.</div>
     </div>
   )
